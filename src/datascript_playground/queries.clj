@@ -28,7 +28,7 @@
 (d/filter
   test-db
   (fn [db [entity-id attribute value tx-id retracted? :as datom]]
-    (and (= :age attribute) (< value 20))))
+    (and (= :age attribute) (<= value 20))))
 
 ;;Pull
 (d/pull test-db [:name :age :food] 1)
@@ -38,7 +38,8 @@
 ; see http://www.learndatalogtoday.org
 
 ;Get all the names
-(d/q '[:find ?name
+;[?foo ...] gives a vector vs. a set
+(d/q '[:find [?name ...]
        :where
        [?e :name ?name]]
      test-db)
@@ -62,7 +63,7 @@
        [?e :name ?name]
        [?e :age ?age]
        ;Use custom function. Must be ns-qualified.
-       [(clj-datalog.core/status ?age) ?status]]
+       [(datascript-playground.queries/status ?age) ?status]]
      test-db)
 
 ;Total the ages of all the minors using an existing function
@@ -82,7 +83,7 @@
            {:name "Jenny" :age 18}])
       b (d/db-with
           (d/empty-db)
-          [{:name "Mark" :food "Pizza"}
+          [{:name "Mark" :food "Tacos"}
            {:name "Chloe" :food "Tots"}])]
   (d/q
     '[:find ?n ?f ?a ?status
@@ -92,7 +93,7 @@
       [$a ?e :age ?a]
       [$b ?x :name ?n]
       [$b ?x :food ?f]
-      [(clj-datalog.core/status ?a) ?status]]
+      [(datascript-playground.queries/status  ?a) ?status]]
     a b))
 
 ;Same join, but with destructured args.
@@ -113,23 +114,62 @@
       [$a ?e :age ?age]]
     a b))
 
-;Sum ages of minors and adults - Why U no workey?
-(let [a (d/db-with
-          (d/empty-db)
-          [{:name "Becky" :age 21}
-           {:name "Mark" :age 23}
-           {:name "Chloe" :age 9}
-           {:name "Chloe" :age 90}
-           {:name "Jenny" :age 18}])]
+;Sum ages of minors and adults, but doesn't work due to duplicate values
+(let [db (d/db-with
+           (d/empty-db)
+           [{:name "Becky" :age 21}
+            {:name "Mark" :age 23}
+            ;{:name "John" :age 23}
+            {:name "Chloe" :age 9}
+            ;{:name "Chloe" :age 9}
+            {:name "Chloe" :age 90}
+            {:name "Jenny" :age 18}])]
   (d/q
-    '[:find (sum ?a) (sum ?b)
-      :in $a
+    '[:find ?minor (sum ?a)
       :where
-      [$a ?e :age ?a]
-      [(< ?a 21)]
-      [$a ?f :age ?b]
-      [(>= ?b 21)]]
-    a))
+      [?e :age ?a]
+      [(< ?a 21) ?minor]]
+    db))
+
+;Sum ages of minors and adults - works due to with
+(let [db (d/db-with
+           (d/empty-db)
+           [{:name "Becky" :age 21}
+            {:name "Mark" :age 23}
+            {:name "John" :age 23}
+            {:name "Chloe" :age 9}
+            ;Try :with ?e instead.
+            ;{:name "Chloe" :age 9}
+            {:name "Chloe" :age 90}
+            {:name "Jenny" :age 18}])]
+  (d/q
+    '[:find ?minor (sum ?a)
+      ;or with ?e
+      :with ?name
+      :where
+      [?e :age ?a]
+      [?e :name ?name]
+      [(< ?a 21) ?minor]]
+    db))
+
+;Bad example from http://docs.datomic.com/query.html#with
+(d/q
+  '[:find (sum ?heads) .
+    :in [[_ ?heads]]]
+  [["Cerberus" 3]
+   ["Medusa" 1]
+   ["Cyclops" 1]
+   ["Chimera" 1]])
+
+;Good example from http://docs.datomic.com/query.html#with
+(d/q
+  '[:find (sum ?heads) .
+    :with ?monster
+    :in [[?monster ?heads]]]
+  [["Cerberus" 3]
+   ["Medusa" 1]
+   ["Cyclops" 1]
+   ["Chimera" 1]])
 
 ;Count instances by age and sum the ages
 (let [a (d/db-with
