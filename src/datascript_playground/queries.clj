@@ -186,3 +186,42 @@
       [$a ?e :name ?n]
       [$a ?e :age ?a]]
     a))
+
+;Predicate/function goodness
+(d/q
+  '[:find ?celsius .
+    :in ?fahrenheit
+    :where [(- ?fahrenheit 32) ?f-32]
+    [(/ ?f-32 1.8) ?celsius]]
+  32)
+
+(d/q
+  ;; query
+  '[:find [?prefix ...]
+    :in [?word ...]
+    :where [(subs ?word 0 5) ?prefix]]
+  ;; inputs
+  ["hello" "antidisestablishmentarianism"])
+
+;Somehow this should work
+;https://github.com/tonsky/datascript/issues/86
+;http://docs.datomic.com/query.html#rules
+(let [a (d/db-with
+          (d/empty-db)
+          [{:name :rock :beats :scissors}
+           {:name :scissors :beats :paper}
+           {:name :paper :beats :rock}])]
+  (d/q
+    '[:find ?e .
+      :in $ % ?a ?b
+      :where [(winner $ ?e ?a ?b)]]
+    a
+    '[[(winner $ ?e ?a ?b)
+       [$ ?e :beats ?b]
+       [$ ?e :name ?a]]
+      [(winner ?a ?b)
+       [$ ?e :beats ?a]
+       [$ ?e :name ?b]]]
+    :paper
+    :rock))
+
