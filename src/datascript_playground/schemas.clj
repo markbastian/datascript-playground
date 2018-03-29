@@ -39,8 +39,7 @@
 
 ;Full on schema
 (let [db (d/db-with
-           (db/empty-db {:foo/name    {:db/unique :db.unique/identity}
-                         :name    {:db/unique :db.unique/identity}
+           (db/empty-db {:name    {:db/unique :db.unique/identity}
                          :spouse  {:db/cardinality :db.cardinality/one
                                    :db/valueType   :db.type/ref}
                          :child   {:db/cardinality :db.cardinality/many
@@ -49,8 +48,7 @@
                                    :db/valueType   :db.type/ref}
                          ;:db.unique/value is for identity attributes
                          :gov-id {:db/unique :db.unique/value}})
-           [{:foo/name "Mark"}
-            {:name "Mark" :gov-id 123}
+           [{:name "Mark" :gov-id 123}
             {:name "Becky" :gov-id 987}
             {:name "Chloe" :gov-id 231}
             {:name "Jenny" :gov-id 986}
