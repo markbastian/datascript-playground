@@ -1,7 +1,10 @@
 (ns datascript-playground.queries
   (:require [datascript-playground.core :as core]
             [datascript.core :as d]
-            [datascript.db :as db]))
+            [datascript.db :as db]
+            [clojure-csv.core :as csv]
+            [clojure.string :as cs]
+            [clojure.edn :as edn]))
 
 ;https://github.com/tonsky/datascript/wiki/API-overview
 ;A datom is a 5-tuple consisting of:
@@ -114,6 +117,24 @@
       [$a ?e :age ?age]]
     a b))
 
+;Stress test of join. Add an index later.
+#_(time
+  (let [n 1000000
+        a (map (fn [i] {:id i :x (rand)}) (range n))
+        b (map (fn [i] {:id i :y (rand-int 1000)}) (range n))
+        dba (time (d/db-with (d/empty-db {:id {:db/index true}}) a))
+        dbb (time (d/db-with (d/empty-db {:id {:db/index true}}) b))]
+    (count
+      (time (d/q
+              '[:find ?id ?x ?y
+                :in $a $b
+                :where
+                [$a ?e :id ?id]
+                [$a ?e :x ?x]
+                [$b ?b :id ?id]
+                [$b ?b :y ?y]]
+              dba dbb)))))
+
 ;Sum ages of minors and adults, but doesn't work due to duplicate values
 (let [db (d/db-with
            (d/empty-db)
@@ -203,10 +224,35 @@
   ;; inputs
   ["hello" "antidisestablishmentarianism"])
 
+;Get attributes of people
+(let [a (d/db-with
+          (d/empty-db)
+          [{:name "Becky" :age 21 :color :red}
+           {:name "Mark" :age 23 :size 1}
+           {:name "Chloe" :age 9}
+           {:name "Chloe" :age 90}
+           {:name "Jenny" :age 18}])]
+  (d/q
+    '[:find ?attr
+      :where
+      [?e :name "Mark"]
+      [?e ?attr]]
+    a))
+
+;Get attributes of people
+(let [a (d/db-with
+          (d/empty-db)
+          [{:name "Mark" :age 23 :size 1}])]
+  (d/q
+    '[:find ?timestamp
+      :where
+      [?p :name "Mark" ?timestamp]]
+    a))
+
 ;Somehow this should work
 ;https://github.com/tonsky/datascript/issues/86
 ;http://docs.datomic.com/query.html#rules
-(let [a (d/db-with
+#_(let [a (d/db-with
           (d/empty-db)
           [{:name :rock :beats :scissors}
            {:name :scissors :beats :paper}
@@ -225,3 +271,49 @@
     :paper
     :rock))
 
+(defn kill-nils [m]
+  (into {} (filter second m)))
+
+(defn movie-data []
+  (let [[f & rs] (->> "/Users/mbastian/Downloads/movie_metadata.csv" slurp csv/parse-csv)
+        k (map (comp keyword #(cs/replace % #"_" "-")) f)]
+    (map (fn [r]
+           (-> (zipmap k (map #(cs/trim (cs/replace % #"\xA0" " ")) r))
+               (update :actor-1-facebook-likes edn/read-string)
+               (update :actor-2-facebook-likes edn/read-string)
+               (update :actor-3-facebook-likes edn/read-string)
+               (update :aspect-ratio edn/read-string)
+               (update :budget edn/read-string)
+               (update :cast-total-facebook-likes edn/read-string)
+               (update :director-facebook-likes edn/read-string)
+               (update :duration edn/read-string)
+               (update :facenumber-in-poster edn/read-string)
+               (update :gross edn/read-string)
+               (update :imdb-score edn/read-string)
+               (update :movie-facebook-likes edn/read-string)
+               (update :num-critic-for-reviews edn/read-string)
+               (update :num-user-for-reviews edn/read-string)
+               (update :num-voted-users edn/read-string)
+               (update :title-year edn/read-string)
+               kill-nils)) rs)))
+
+(def movie-data-db
+  (d/db-with
+    (d/empty-db)
+    (movie-data)))
+
+(d/q
+  '[:find ?a
+    ;:with ?e
+    :where
+    [?e :movie-title ?title]
+    [?e :movie-title "Star Wars: Episode VII - The Force Awakens"]
+    ;[?e :movie-title "Avatar"]
+    ;[?e :actor-1-name ?name1]
+    ;[?e :actor-2-name ?name2]
+    ;[?e :actor-3-name ?name3]
+    [?e ?a]
+    ;[?e :budget ?budget]
+    ;[(>= ?budget 300000000)]
+    ]
+  movie-data-db)
