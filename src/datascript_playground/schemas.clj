@@ -69,12 +69,33 @@
      {:name "Becky" :gov-id 987}
      {:name "Chloe" :gov-id 231}
      {:name "Jenny" :gov-id 986}
-     {:name "Mark" :spouse {:name "Becky"} :child {:name "Chloe"}}
-     {:name "Becky" :spouse {:name "Mark"} :child {:name "Chloe"}}
-     {:name "Mark" :spouse {:name "Becky"} :child {:name "Jenny"}}
-     {:name "Becky" :spouse {:name "Mark"} :child {:name "Jenny"}}
+     {:name "Mark" :spouse {:name "Becky"} :child [{:name "Chloe"} {:name "Jenny"}]}
+     {:name "Becky" :spouse {:name "Mark"} :child [{:name "Chloe"} {:name "Jenny"}]}
      {:name "Chloe" :sibling {:name "Jenny"}}
      {:name "Jenny" :sibling {:name "Chloe"}}]))
+
+;Full on schema
+(def db4
+  (d/db-with
+    (db/empty-db {:name    {:db/unique :db.unique/identity}
+                  :spouse  {:db/cardinality :db.cardinality/one
+                            :db/valueType   :db.type/ref}
+                  :child   {:db/cardinality :db.cardinality/many
+                            :db/valueType   :db.type/ref}
+                  :sibling {:db/cardinality :db.cardinality/many
+                            :db/valueType   :db.type/ref}
+                  ;:db.unique/value is for identity attributes
+                  :gov-id {:db/unique :db.unique/value}})
+    [{:name "Mark" :gov-id 123
+      :spouse {:name "Becky"
+               :gov-id 987
+               :spouse [:name "Mark"]
+               :child [{:name "Chloe" :gov-id 231
+                        :sibling [{:name "Jenny"
+                                   :gov-id 986
+                                   :sibling [[:name "Chloe"]]}]}
+                       {:name "Jenny"}]}
+      :child [[:name "Chloe"] [:name "Jenny"]]}]))
 
 (d/q
   '[:find ?name .
@@ -95,6 +116,7 @@
 ;Backreferences
 (d/pull db3 '[:_child] [:name "Chloe"])
 (d/pull db3 '[{:_child [:name]}] [:name "Chloe"])
+(d/pull db4 '[{:_child [:name]}] [:name "Chloe"])
 
 (let [{{sn :name} :spouse :keys [name child]} (d/entity db3 [:name "Mark"])]
   [:name name :spouse sn :children (map :name child)])

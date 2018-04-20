@@ -6,4 +6,6 @@
   :dependencies [[org.clojure/clojure "1.9.0-RC2"]
                  [datascript "0.16.3"]
                  [clojure-csv/clojure-csv "2.0.1"]
-                 [clj-time "0.14.2"]])
+                 [clj-time "0.14.2"]
+                 [digest "1.4.8"]
+                 [clojure-csv/clojure-csv "2.0.1"]])
