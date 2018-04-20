@@ -7,64 +7,100 @@
 ;https://github.com/tonsky/datascript/wiki/Tips-&-tricks
 
 ;Produces 6 entities with 16 datoms
-(d/db-with
-  (db/empty-db {})
-  [{:name "Mark" :spouse "Becky" :child "Chloe"}
-   {:name "Becky" :spouse "Mark" :child "Chloe"}
-   {:name "Mark" :spouse "Becky" :child "Jenny"}
-   {:name "Becky" :spouse "Mark" :child "Jenny"}
-   {:name "Chloe" :sibling "Jenny"}
-   {:name "Jenny" :sibling "Chloe"}])
+(def db0
+  (d/db-with
+    (db/empty-db {})
+    [{:name "Mark" :spouse "Becky" :child "Chloe"}
+     {:name "Becky" :spouse "Mark" :child "Chloe"}
+     {:name "Mark" :spouse "Becky" :child "Jenny"}
+     {:name "Becky" :spouse "Mark" :child "Jenny"}
+     {:name "Chloe" :sibling "Jenny"}
+     {:name "Jenny" :sibling "Chloe"}]))
+
+(d/q
+  '[:find ?e
+    :in $
+    :where
+    [?e :name "Mark"]]
+  db0)
+
+;(d/pull db0 '[*] [:name "Mark"])
 
 ;4 entities. However, child information is lost.
-(d/db-with
-  (db/empty-db {:name {:db/unique :db.unique/identity}})
-  [{:name "Mark" :spouse "Becky" :child "Chloe"}
-   {:name "Becky" :spouse "Mark" :child "Chloe"}
-   {:name "Mark" :spouse "Becky" :child "Jenny"}
-   {:name "Becky" :spouse "Mark" :child "Jenny"}
-   {:name "Chloe" :sibling "Jenny"}
-   {:name "Jenny" :sibling "Chloe"}])
+(def db1
+  (d/db-with
+    (db/empty-db {:name {:db/unique :db.unique/identity}})
+    [{:name "Mark" :spouse "Becky" :child "Chloe"}
+     {:name "Becky" :spouse "Mark" :child "Chloe"}
+     {:name "Mark" :spouse "Becky" :child "Jenny"}
+     {:name "Becky" :spouse "Mark" :child "Jenny"}
+     {:name "Chloe" :sibling "Jenny"}
+     {:name "Jenny" :sibling "Chloe"}]))
+
+(d/pull db1 '[*] [:name "Mark"])
 
 ;4 entities, but no relationships
-(d/db-with
-  (db/empty-db {:name {:db/unique :db.unique/identity}
-                :child {:db/cardinality :db.cardinality/many}})
-  [{:name "Mark" :spouse "Becky" :child "Chloe"}
-   {:name "Becky" :spouse "Mark" :child "Chloe"}
-   {:name "Mark" :spouse "Becky" :child "Jenny"}
-   {:name "Becky" :spouse "Mark" :child "Jenny"}
-   {:name "Chloe" :sibling "Jenny"}
-   {:name "Jenny" :sibling "Chloe"}])
+(def db2
+  (d/db-with
+    (db/empty-db {:name {:db/unique :db.unique/identity}
+                  :child {:db/cardinality :db.cardinality/many}})
+    [{:name "Mark" :spouse "Becky" :child "Chloe"}
+     {:name "Becky" :spouse "Mark" :child "Chloe"}
+     {:name "Mark" :spouse "Becky" :child "Jenny"}
+     {:name "Becky" :spouse "Mark" :child "Jenny"}
+     {:name "Chloe" :sibling "Jenny"}
+     {:name "Jenny" :sibling "Chloe"}]))
+
+(d/pull db2 '[*] [:name "Mark"])
 
 ;Full on schema
-(let [db (d/db-with
-           (db/empty-db {:name    {:db/unique :db.unique/identity}
-                         :spouse  {:db/cardinality :db.cardinality/one
-                                   :db/valueType   :db.type/ref}
-                         :child   {:db/cardinality :db.cardinality/many
-                                   :db/valueType   :db.type/ref}
-                         :sibling {:db/cardinality :db.cardinality/many
-                                   :db/valueType   :db.type/ref}
-                         ;:db.unique/value is for identity attributes
-                         :gov-id {:db/unique :db.unique/value}})
-           [{:name "Mark" :gov-id 123}
-            {:name "Becky" :gov-id 987}
-            {:name "Chloe" :gov-id 231}
-            {:name "Jenny" :gov-id 986}
-            {:name "Mark" :spouse {:name "Becky"} :child {:name "Chloe"}}
-            {:name "Becky" :spouse {:name "Mark"} :child {:name "Chloe"}}
-            {:name "Mark" :spouse {:name "Becky"} :child {:name "Jenny"}}
-            {:name "Becky" :spouse {:name "Mark"} :child {:name "Jenny"}}
-            {:name "Chloe" :sibling {:name "Jenny"}}
-            {:name "Jenny" :sibling {:name "Chloe"}}])]
-  (d/q
-    '[:find ?name .
-      :in $ ?e
-      :with
-      :where
-      [?e :spouse ?n]
-      [?n :name ?name]]
-    db [:name "Becky"])
-  (d/pull db '[*] [:name "Mark"])
-  (d/pull db '[:name :gov-id {:spouse 1} {:child 1}] [:gov-id 987]))
+(def db3
+  (d/db-with
+    (db/empty-db {:name    {:db/unique :db.unique/identity}
+                  :spouse  {:db/cardinality :db.cardinality/one
+                            :db/valueType   :db.type/ref}
+                  :child   {:db/cardinality :db.cardinality/many
+                            :db/valueType   :db.type/ref}
+                  :sibling {:db/cardinality :db.cardinality/many
+                            :db/valueType   :db.type/ref}
+                  ;:db.unique/value is for identity attributes
+                  :gov-id {:db/unique :db.unique/value}})
+    [{:name "Mark" :gov-id 123}
+     {:name "Becky" :gov-id 987}
+     {:name "Chloe" :gov-id 231}
+     {:name "Jenny" :gov-id 986}
+     {:name "Mark" :spouse {:name "Becky"} :child {:name "Chloe"}}
+     {:name "Becky" :spouse {:name "Mark"} :child {:name "Chloe"}}
+     {:name "Mark" :spouse {:name "Becky"} :child {:name "Jenny"}}
+     {:name "Becky" :spouse {:name "Mark"} :child {:name "Jenny"}}
+     {:name "Chloe" :sibling {:name "Jenny"}}
+     {:name "Jenny" :sibling {:name "Chloe"}}]))
+
+(d/q
+  '[:find ?name .
+    :in $ ?e
+    :with
+    :where
+    [?e :spouse ?n]
+    [?n :name ?name]]
+  db3 [:name "Becky"])
+
+;Can pull on entity id and db/unique (identity or value) keys
+(d/pull db3 '[*] 1)
+(d/pull db3 '[*] [:name "Mark"])
+
+(d/pull db3 '[:name :gov-id {:spouse 1} {:child 1}] [:gov-id 987])
+(d/pull db3 '[:name :gov-id {:spouse 3} {:child 1}] [:gov-id 987])
+
+;Backreferences
+(d/pull db3 '[:_child] [:name "Chloe"])
+(d/pull db3 '[{:_child [:name]}] [:name "Chloe"])
+
+(let [{{sn :name} :spouse :keys [name child]} (d/entity db3 [:name "Mark"])]
+  [:name name :spouse sn :children (map :name child)])
+
+(->> [:name "Mark"]
+     (d/entity db3)
+     :spouse
+     :child
+     (map :_child))
