@@ -10,21 +10,21 @@
 ;https://www.kaggle.com/claudiodavi/superhero-set
 
 (def schema
-  {:name       {:db/unique :db.unique/identity}
-   :alignments {:db/unique :db.unique/identity}
-   :genders    {:db/unique :db.unique/identity}
-   :colors     {:db/unique :db.unique/identity}
-   :hero/id    {:db/unique :db.unique/identity}
-   :power      {:db/unique :db.unique/identity}
+  {:name           {:db/unique :db.unique/identity}
+   :publisher/name {:db/unique :db.unique/identity}
+   :alignments     {:db/unique :db.unique/identity}
+   :genders        {:db/unique :db.unique/identity}
+   :colors         {:db/unique :db.unique/identity}
+   :power          {:db/unique :db.unique/identity}
 
-   :gender     {:db/valueType :db.type/ref}
-   :eye-color  {:db/valueType :db.type/ref}
-   :hair-color {:db/valueType :db.type/ref}
-   :skin-color {:db/valueType :db.type/ref}
-   :publisher  {:db/valueType :db.type/ref}
-   :alignment  {:db/valueType :db.type/ref}
-   :powers     {:db/valueType   :db.type/ref
-                :db/cardinality :db.cardinality/many}})
+   :gender         {:db/valueType :db.type/ref}
+   :eye-color      {:db/valueType :db.type/ref}
+   :hair-color     {:db/valueType :db.type/ref}
+   :skin-color     {:db/valueType :db.type/ref}
+   :publisher      {:db/valueType :db.type/ref}
+   :alignment      {:db/valueType :db.type/ref}
+   :powers         {:db/valueType   :db.type/ref
+                    :db/cardinality :db.cardinality/many}})
 
 (defn kwize [s]
   (-> s cs/lower-case (cs/replace #"[-\s_]+" "-") keyword))
@@ -53,7 +53,7 @@
 
 (defn normalize-hero-info [{:keys [name gender eye-color race hair-color skin-color height publisher alignment weight]}]
   (cond-> {:name name}
-          (seq publisher) (assoc :publisher {:id-str publisher})
+          (seq publisher) (assoc :publisher {:publisher/name publisher})
           height (assoc :height height)
           weight (assoc :weight weight)
           alignment (assoc :alignment {:alignments alignment})
@@ -123,13 +123,6 @@
 ;                                  }
 ;var db = d.db_with(d.empty_db(), [[":db.fn/call", dbfn, 1, "Ilya", 44]]);
 
-;https://github.com/tonsky/datascript/blob/master/test/js/tests.js
-(defn x [db e n a] [[:db/add e :name n],
-                    [:db/add e :age a]])
-
-(d/db-with
-  (db/empty-db)
-  [[:db.fn/call x 1 "a" 3]])
 
 ;(d/q
 ;  '[:find ?a ?va ?vb
