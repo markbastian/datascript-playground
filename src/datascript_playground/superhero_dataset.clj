@@ -43,10 +43,7 @@
                     (cond-> skin-color (update :skin-color kwize))
                     (cond-> alignment (update :alignment kwize))
                     (cond-> height (update :height edn/read-string))
-                    (cond-> weight (update :weight edn/read-string)))))
-         ;(group-by :name)
-         ;(map (fn [[_ v]] (apply merge v)))
-         )))
+                    (cond-> weight (update :weight edn/read-string))))))))
 
 (def hero-powers
   (let [[h & r] (-> "datascript_playground/super_hero_powers.csv" io/resource slurp csv/parse-csv)
