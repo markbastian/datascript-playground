@@ -8,4 +8,5 @@
                  [clojure-csv/clojure-csv "2.0.1"]
                  [clj-time "0.14.2"]
                  [digest "1.4.8"]
-                 [clojure-csv/clojure-csv "2.0.1"]])
+                 [clojure-csv/clojure-csv "2.0.1"]
+                 [com.clojure-goes-fast/clj-memory-meter "0.1.0"]])

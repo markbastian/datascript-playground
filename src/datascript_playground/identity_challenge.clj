@@ -69,9 +69,25 @@
      :movie/_actors
      (into {}))
 
-(d/pull media-db '[{:movie/_actors [:movie/title]}] [:common/name "Charlton Heston"])
+;Pull all movies starring Charlton Heston
+(d/pull media-db '[{:movie/_actors
+                    [{:movie/title [:common/title]}
+                     {:movie/release-year [:common/year]}
+                     {:movie/actors [:common/name]}]}]
+        [:common/name "Charlton Heston"])
 
-(d/pull media-db '[{:movie/_title [:movie/title :movie/release-year]}] [:common/title "Ben-Hur"])
+(d/pull media-db
+        '[{:movie/_release-year
+           [{:movie/title [:common/title]}
+            {:movie/release-year [:common/year]}
+            {:movie/actors [:common/name]}]}]
+        [:common/year 1984])
+
+(->> [:common/title "Ben-Hur"]
+     (d/entity media-db)
+     :movie/_title
+     (mapcat :movie/actors)
+     (map :common/name))
 
 ;Find actors in the 'classic' Ben-Hur
 (d/q
@@ -106,7 +122,10 @@
      {:common/year 1959}
      {:common/name "Jack Huston"}]))
 
-(defn guard [db {:keys [movie/title movie/release-year] :as movie}]
+(defn guard
+  "A 'guard' function that only inserts the object into the db if the object is not present, given
+  a custom definition of identity."
+  [db {:keys [movie/title movie/release-year] :as movie}]
   (when-not
     (d/q
       '[:find ?e .
@@ -116,21 +135,6 @@
         [?e :movie/release-year ?release-year]]
       db (cond-> title (map? title) first) (cond-> release-year (map? release-year) first))
     [movie]))
-
-;(defn guard [db {:keys [movie/title movie/release-year] :as movie}]
-;  (when-not
-;    (d/q
-;      '[:find ?e .
-;        :in $ ?title ?release-year
-;        :where
-;        [?t :common/name ?title]
-;        [?y :common/year ?release-year]
-;        [?e :movie/title ?t]
-;        [?e :movie/release-year ?y]]
-;      db
-;      (second (cond-> title (map? title) first))
-;      (second (cond-> release-year (map? release-year) first)))
-;    [movie]))
 
 ;Does NOT insert anything
 (assert
