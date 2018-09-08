@@ -10,20 +10,21 @@
 ;https://www.kaggle.com/claudiodavi/superhero-set
 
 (def schema
-  {:name           {:db/unique :db.unique/identity}
+  {:hero/name           {:db/unique :db.unique/identity}
    :publisher/name {:db/unique :db.unique/identity}
    :alignments     {:db/unique :db.unique/identity}
    :genders        {:db/unique :db.unique/identity}
    :colors         {:db/unique :db.unique/identity}
    :power          {:db/unique :db.unique/identity}
+   :species/name   {:db/unique :db.unique/identity}
 
-   :gender         {:db/valueType :db.type/ref}
-   :eye-color      {:db/valueType :db.type/ref}
-   :hair-color     {:db/valueType :db.type/ref}
-   :skin-color     {:db/valueType :db.type/ref}
-   :publisher      {:db/valueType :db.type/ref}
-   :alignment      {:db/valueType :db.type/ref}
-   :powers         {:db/valueType   :db.type/ref
+   ;:gender         {:db/valueType :db.type/ref}
+   ;:eye-color      {:db/valueType :db.type/ref}
+   ;:hair-color     {:db/valueType :db.type/ref}
+   ;:skin-color     {:db/valueType :db.type/ref}
+   :hero/publisher      {:db/valueType :db.type/ref}
+   ;:alignment      {:db/valueType :db.type/ref}
+   :hero/powers         {:db/valueType   :db.type/ref
                     :db/cardinality :db.cardinality/many}})
 
 (defn kwize [s]
@@ -49,19 +50,31 @@
   (let [[h & r] (-> "datascript_playground/super_hero_powers.csv" io/resource slurp csv/parse-csv)
         cols (map kwize h)]
     (map (fn [row] (-> (zipmap cols (map #({"True" true "False" false} % %) row))
-                       (rename-keys {:hero-names :name}))) r)))
+                       (rename-keys {:hero-names :hero/name}))) r)))
+
+;(defn normalize-hero-info [{:keys [name gender eye-color race hair-color skin-color height publisher alignment weight]}]
+;  (cond-> {:name name}
+;          (seq publisher) (assoc :publisher {:publisher/name publisher})
+;          height (assoc :height height)
+;          weight (assoc :weight weight)
+;          alignment (assoc :alignment {:alignments alignment})
+;          gender (assoc :gender {:genders gender})
+;          race (assoc :race {:id-str race})
+;          hair-color (assoc :hair-color {:colors hair-color})
+;          eye-color (assoc :eye-color {:colors eye-color})
+;          skin-color (assoc :skin-color {:colors skin-color})))
 
 (defn normalize-hero-info [{:keys [name gender eye-color race hair-color skin-color height publisher alignment weight]}]
-  (cond-> {:name name}
-          (seq publisher) (assoc :publisher {:publisher/name publisher})
-          height (assoc :height height)
-          weight (assoc :weight weight)
-          alignment (assoc :alignment {:alignments alignment})
-          gender (assoc :gender {:genders gender})
+  (cond-> {:hero/name name}
+          (seq publisher) (assoc :hero/publisher {:publisher/name publisher})
+          height (assoc :hero/height height)
+          weight (assoc :hero/weight weight)
+          alignment (assoc :alignment alignment)
+          gender (assoc :gender gender)
           race (assoc :race {:id-str race})
-          hair-color (assoc :hair-color {:colors hair-color})
-          eye-color (assoc :eye-color {:colors eye-color})
-          skin-color (assoc :skin-color {:colors skin-color})))
+          hair-color (assoc :hair-color hair-color)
+          eye-color (assoc :eye-color eye-color)
+          skin-color (assoc :skin-color skin-color)))
 
 (defn normalize-hero-powers [{:keys [name] :as m}]
   {:name   name
@@ -73,6 +86,18 @@
       (d/db-with (map normalize-hero-powers hero-powers))))
 
 (count hero-db)
+
+[[737 :alignment :good 536870913]
+ [737 :eye-color :brown 536870913]
+ [737 :gender :male 536870913]
+ [737 :hair-color :white 536870913]
+ [737 :height 66.0 536870913]
+ [737 :name "Yoda" 536870913]
+ [737 :powers 742 536870914]
+ [737 :powers 743 536870914]
+ [737 :race {:id-str "Yoda's species"} 536870913]
+ [737 :skin-color :green 536870913]
+ [737 :weight 17.0 536870913]]
 
 (d/pull hero-db '[*] [:name "Batman"])
 
