@@ -1,0 +1,28 @@
+{:noc/name       {:db/unique :db.unique/identity}
+ :noc/region     {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
+
+ ;Atomic entities
+ :person/id      {:db/unique :db.unique/identity}
+ :person/name    {:db/unique :db.unique/identity}
+ :person/sex     {:db/unique :db.unique/identity}
+ :sport/name     {:db/unique :db.unique/identity}
+ :event/name     {:db/unique :db.unique/identity}
+ :team/name      {:db/unique :db.unique/identity}
+ :games/name     {:db/unique :db.unique/identity}
+ :city/name      {:db/unique :db.unique/identity}
+ :season/name    {:db/unique :db.unique/identity}
+ :year/value     {:db/unique :db.unique/identity}
+ :medal/name     {:db/unique :db.unique/identity}
+
+ :athlete/id     {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/name   {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/sex    {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/team   {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/noc    {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/games  {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/year   {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/season {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/city   {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/sport  {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/event  {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}
+ :athlete/medal  {:db/valueType :db.type/ref :db/cardinality :db.cardinality/one}}

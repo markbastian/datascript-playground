@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Force Layout with labels on edges</title>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <style type="text/css">
+    </style>
+</head>
+<body>
+<script type="text/javascript">
+
+    var w = 400;
+    var h = 400;
+    var linkDistance=20;
+
+    var colors = d3.scale.category10();
+
+    var dataset = {
+
+        nodes: [
+            {name: "Adam"},
+            {name: "Bob"},
+            {name: "Carrie"},
+            {name: "Donovan"},
+            {name: "Edward"},
+            {name: "Felicity"},
+            {name: "George"},
+            {name: "Hannah"},
+            {name: "Iris"},
+            {name: "Jerry"}
+        ],
+        edges: [
+            {source: 0, target: 1},
+            {source: 0, target: 2},
+            {source: 0, target: 3},
+            {source: 0, target: 4},
+            {source: 1, target: 5},
+            {source: 2, target: 5},
+            {source: 2, target: 5},
+            {source: 3, target: 4},
+            {source: 5, target: 8},
+            {source: 5, target: 9},
+            {source: 6, target: 7},
+            {source: 7, target: 8},
+            {source: 8, target: 9}
+        ]
+    };
+
+
+    var svg = d3.select("body").append("svg").attr({"width":w,"height":h});
+
+    var force = d3.layout.force()
+        .nodes(dataset.nodes)
+        .links(dataset.edges)
+        .size([w,h])
+        .linkDistance([linkDistance])
+        .charge([-500])
+        .theta(0.1)
+        .gravity(0.05)
+        .start();
+
+    var edges = svg.selectAll("line")
+        .data(dataset.edges)
+        .enter()
+        .append("line")
+        .attr("id",function(d,i) {return 'edge'+i})
+        .attr('marker-end','url(#arrowhead)')
+        .style("stroke","#ccc")
+        .style("pointer-events", "none");
+
+    var nodes = svg.selectAll("circle")
+        .data(dataset.nodes)
+        .enter()
+        .append("circle")
+        .attr({"r":15})
+        .style("fill",function(d,i){return colors(i);})
+
+    force.on("tick", function(){
+        edges.attr({"x1": function(d){return d.source.x;},
+            "y1": function(d){return d.source.y;},
+            "x2": function(d){return d.target.x;},
+            "y2": function(d){return d.target.y;}
+        });
+
+        nodes.attr({"cx":function(d){return d.x;},
+            "cy":function(d){return d.y;}
+        });
+    });
+
+</script>
+
+</body>
+</html>
