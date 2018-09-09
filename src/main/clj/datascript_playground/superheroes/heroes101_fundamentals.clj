@@ -2,7 +2,8 @@
   (:require [datascript-playground.superheroes.core :as shc]
             [clojure.set :refer [rename-keys]]
             [datascript.db :as db]
-            [datascript.core :as d]))
+            [datascript.core :as d]
+            [clj-memory-meter.core :as mm]))
 
 (def hero-db0
   (-> (db/empty-db {})
@@ -56,6 +57,22 @@
 (count (d/datoms hero-db0 :avet))
 ;Smaller - AVET is "attribute-value" and is only present for unique values and indexed values
 (count (d/datoms hero-db1 :avet))
+
+;Larger, but no avet data at all
+{:memory-size "8.0 MB"
+ :count-datoms 117579
+ :count-eavt 117579
+ :count-aevt 117579
+ :count-avet 0}
+(shc/stats hero-db0)
+
+;Smaller due to joins on id
+{:memory-size "7.9 MB"
+ :count-datoms 116817
+ :count-eavt 116817
+ :count-aevt 116817
+ :count-avet 739}
+(shc/stats hero-db1)
 
 ;Pros of this approach
 ; * Easy

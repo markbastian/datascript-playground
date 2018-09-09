@@ -3,7 +3,9 @@
             [clojure.java.io :as io]
             [clojure-csv.core :as csv]
             [clojure.edn :as edn]
-            [clojure.set :refer [rename-keys]]))
+            [clojure.set :refer [rename-keys]]
+            [datascript.core :as d]
+            [clj-memory-meter.core :as mm]))
 
 ;https://www.kaggle.com/claudiodavi/superhero-set
 
@@ -11,7 +13,7 @@
   (-> s cs/lower-case (cs/replace #"[-\s_]+" "-") keyword))
 
 (def hero-info
-  (let [[[_ & h] & r] (-> "datascript_playground/heroes_information.csv" io/resource slurp csv/parse-csv)
+  (let [[[_ & h] & r] (-> "datascript_playground/superheroes/heroes_information.csv" io/resource slurp csv/parse-csv)
         cols (map kwize h)]
     (->> r
          (map (fn [row] (->> (rest row) (map vector cols) (remove (fn [[_ v]] (re-matches #"-\d*(?:\.\d*)?" v))))))
@@ -27,7 +29,41 @@
                     (cond-> weight (update :weight edn/read-string))))))))
 
 (def hero-powers
-  (let [[h & r] (-> "datascript_playground/super_hero_powers.csv" io/resource slurp csv/parse-csv)
+  (let [[h & r] (-> "datascript_playground/superheroes/super_hero_powers.csv" io/resource slurp csv/parse-csv)
         cols (map kwize h)]
-    (map (fn [row] (-> (zipmap cols (map #({"True" true "False" false} % %) row))
-                       (rename-keys {:hero-names :name}))) r)))
+    (map
+      (fn [row]
+        (-> (zipmap cols (map #({"True" true "False" false} % %) row))
+            (rename-keys {:hero-names :name})))
+      r)))
+
+;https://www.kaggle.com/stefanocoretta/yoda-speech-corpus/version/1#
+(defn normalize-names [s]
+  (-> s
+      (cs/replace #"\t.*" "")
+      (cs/replace #"\s*-\s*" "-")
+      (cs/replace #"l" "I")
+      (cs/split #"\s+")
+      (->> (map cs/capitalize)
+           (cs/join " "))))
+
+(def yoda-quotes
+  (let [[h & r] (-> "datascript_playground/superheroes/yoda-corpus.csv" io/resource slurp csv/parse-csv)
+        cols (map kwize h)]
+    (->> r
+         (map
+           (fn [row]
+             (-> (zipmap cols row)
+                 (update :character normalize-names)
+                 (update :movie edn/read-string)
+                 (update :scene edn/read-string)
+                 (update :line edn/read-string))))
+         (remove (comp cs/blank? :character)))))
+
+
+(defn stats [db]
+  {:memory-size  (mm/measure db)
+   :count-datoms (count db)
+   :count-eavt   (count (d/datoms db :eavt))
+   :count-aevt   (count (d/datoms db :aevt))
+   :count-avet   (count (d/datoms db :avet))})
