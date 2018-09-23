@@ -42,7 +42,7 @@
 ;4 entities, but no relationships
 (def db2
   (d/db-with
-    (db/empty-db {:name {:db/unique :db.unique/identity}
+    (db/empty-db {:name  {:db/unique :db.unique/identity}
                   :child {:db/cardinality :db.cardinality/many}})
     [{:name "Mark" :spouse "Becky" :child "Chloe"}
      {:name "Becky" :spouse "Mark" :child "Chloe"}
@@ -64,7 +64,7 @@
                   :sibling {:db/cardinality :db.cardinality/many
                             :db/valueType   :db.type/ref}
                   ;:db.unique/value is for identity attributes
-                  :gov-id {:db/unique :db.unique/value}})
+                  :gov-id  {:db/unique :db.unique/value}})
     [{:name "Mark" :gov-id 123}
      {:name "Becky" :gov-id 987}
      {:name "Chloe" :gov-id 231}
@@ -85,17 +85,49 @@
                   :sibling {:db/cardinality :db.cardinality/many
                             :db/valueType   :db.type/ref}
                   ;:db.unique/value is for identity attributes
-                  :gov-id {:db/unique :db.unique/value}})
-    [{:name "Mark" :gov-id 123
-      :spouse {:name "Becky"
+                  :gov-id  {:db/unique :db.unique/value}})
+    [{:name   "Mark" :gov-id 123
+      :spouse {:name   "Becky"
                :gov-id 987
                :spouse [:name "Mark"]
-               :child [{:name "Chloe" :gov-id 231
-                        :sibling [{:name "Jenny"
-                                   :gov-id 986
-                                   :sibling [[:name "Chloe"]]}]}
-                       {:name "Jenny"}]}
-      :child [[:name "Chloe"] [:name "Jenny"]]}]))
+               :child  [{:name    "Chloe" :gov-id 231
+                         :sibling [{:name    "Jenny"
+                                    :gov-id  986
+                                    :sibling [[:name "Chloe"]]}]}
+                        {:name "Jenny"}]}
+      :child  [[:name "Chloe"] [:name "Jenny"]]}]))
+
+(def basic-family-db
+  (d/db-with
+    (db/empty-db {:name   {:db/unique :db.unique/identity}
+                  :spouse {:db/cardinality :db.cardinality/one
+                           :db/valueType   :db.type/ref}
+                  :child  {:db/cardinality :db.cardinality/many
+                           :db/valueType   :db.type/ref}})
+    [{:name "Mark" :gender "M" :age 30}
+     {:name "Becky" :gender "F" :age 30}
+     {:name "Chloe" :gender "F" :age 8}
+     {:name "Jenny" :gender "F" :age 6}
+     {:name   "Mark"
+      :spouse {:name "Becky"}
+      :child  [{:name "Chloe"} {:name "Jenny"}]}
+     {:name   "Becky"
+      :spouse {:name "Mark"}
+      :child  [{:name "Chloe"} {:name "Jenny"}]}]))
+
+(def basic-family-db1
+  (d/db-with
+    (db/empty-db {:name   {:db/unique :db.unique/identity}
+                  :spouse {:db/cardinality :db.cardinality/one
+                           :db/valueType   :db.type/ref}
+                  :child  {:db/cardinality :db.cardinality/many
+                           :db/valueType   :db.type/ref}})
+    [{:name "Mark" :gender "M" :age 30
+      :spouse {:name "Becky" :gender "F" :age 30
+               :child [{:name "Chloe"}
+                       {:name "Jenny" :gender "F" :age 6}]}
+      :child [{:name "Chloe" :gender "F" :age 8}
+              {:name "Jenny"}]}]))
 
 (d/q
   '[:find ?name .

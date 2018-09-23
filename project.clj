@@ -10,7 +10,7 @@
                  [digest "1.4.8"]
                  [hickory "0.7.1"]
                  [clojure-csv/clojure-csv "2.0.2"]
-                 [com.clojure-goes-fast/clj-memory-meter "0.1.1"]
+                 [com.clojure-goes-fast/clj-memory-meter "0.1.2"]
                  ;Graph stuff
                  ;[helpshift/gulfstream "0.2.1"]
                  ;Clojurescript deps
@@ -26,8 +26,8 @@
   :jar-exclusions [#"\.swp|\.swo|\.DS_Store"]
 
   :profiles {:uberjar {:aot :all}
-             :dev {:dependencies [[cider/piggieback "0.3.8"]
-                                  [nrepl "0.4.4"]
+             :dev {:dependencies [[cider/piggieback "0.3.9"]
+                                  [nrepl "0.4.5"]
                                   [figwheel-sidecar "0.5.16"]]
                    :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}}
 
