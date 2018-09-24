@@ -122,12 +122,12 @@
                            :db/valueType   :db.type/ref}
                   :child  {:db/cardinality :db.cardinality/many
                            :db/valueType   :db.type/ref}})
-    [{:name "Mark" :gender "M" :age 30
-      :spouse {:name "Becky" :gender "F" :age 30
+    [{:name   "Mark" :gender "M" :age 30
+      :spouse {:name  "Becky" :gender "F" :age 30
                :child [{:name "Chloe"}
                        {:name "Jenny" :gender "F" :age 6}]}
-      :child [{:name "Chloe" :gender "F" :age 8}
-              {:name "Jenny"}]}]))
+      :child  [{:name "Chloe" :gender "F" :age 8}
+               {:name "Jenny"}]}]))
 
 (d/q
   '[:find ?name .
