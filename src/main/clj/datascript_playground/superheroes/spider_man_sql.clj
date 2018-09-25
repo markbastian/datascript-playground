@@ -1,4 +1,4 @@
-(ns datascript-playground.superheroes.spider-man-h2
+(ns datascript-playground.superheroes.spider-man-sql
   (:require [clojure.java.jdbc :as j]))
 
 (def people [{:id 1 :name "Peter Parker" :gender "M"}

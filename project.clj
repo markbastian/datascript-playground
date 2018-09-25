@@ -12,6 +12,8 @@
                  [clojure-csv/clojure-csv "2.0.2"]
                  [com.clojure-goes-fast/clj-memory-meter "0.1.2"]
                  ;For comparison
+                 [com.datomic/datomic-free "0.9.5697"]
+                 [com.google.guava/guava "26.0-jre"]
                  [org.clojure/java.jdbc "0.7.5"]
                  [com.h2database/h2 "1.4.197"]
                  ;Graph stuff
