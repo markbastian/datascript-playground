@@ -2,6 +2,13 @@
   (:require [datascript.db :as db]
             [datascript.core :as d]))
 
+(d/db-with
+  (db/empty-db {:powers {:db/cardinality :db.cardinality/many}
+                :weapons {:db/cardinality :db.cardinality/many}})
+  [{:name    "Batman"
+    :alias   "Bruce Wayne"
+    :powers  ["Rich"]
+    :weapons ["Belt" "Kryptonite Spear"]}])
 
 (def parker-family
   (d/db-with
@@ -17,10 +24,28 @@
      {:name "Mary Parker" :gender "F" :spouse {:name "Richard Parker"}}
      {:name "Ben Parker" :gender "M" :spouse {:name "May Parker"}}
      {:name "May Parker" :gender "F" :spouse {:name "Ben Parker"}}
-     {:name "Richard Parker" :child [:name "Peter Parker"]}
-     {:name "Mary Parker" :child [:name "Peter Parker"]}
-     {:name "Grandpa Parker" :child [[:name "Ben Parker"]
-                                     [:name "Richard Parker"]]}]))
+     {:name "Richard Parker" :child {:name "Peter Parker"}}
+     {:name "Mary Parker" :child {:name "Peter Parker"}}
+     {:child  [{:name "Ben Parker"}
+               {:name "Richard Parker"}]
+      :gender "M"}
+     {:child [{:name "Ben Parker"}
+              {:name "Richard Parker"}]
+      :gender "F"}]))
+
+[{:name "Peter Parker" :gender "M" :alias ["Spider-Man" "Spidey"]}
+ {:name "Richard Parker" :gender "M" :spouse {:name "Mary Parker"}}
+ {:name "Mary Parker" :gender "F" :spouse {:name "Richard Parker"}}
+ {:name "Ben Parker" :gender "M" :spouse {:name "May Parker"}}
+ {:name "May Parker" :gender "F" :spouse {:name "Ben Parker"}}
+ {:name "Richard Parker" :child {:name "Peter Parker"}}
+ {:name "Mary Parker" :child {:name "Peter Parker"}}
+ {:child  [{:name "Ben Parker"}
+           {:name "Richard Parker"}]
+  :gender "M"}
+ {:child [{:name "Ben Parker"}
+          {:name "Richard Parker"}]
+  :gender "F"}]
 
 (d/q
   '[:find [?uncle-name ...]
@@ -62,6 +87,25 @@
 ;     {:name "Grandpa Parker" :child [[:name "Ben Parker"]
 ;                                     [:name "Richard Parker"]
 ;                                     [:name "June Parker"]]}]))
+
+;(def parker-family-old
+;  (d/db-with
+;    (db/empty-db {:name   {:db/unique :db.unique/identity}
+;                  :alias  {:db/unique      :db.unique/value
+;                           :db/cardinality :db.cardinality/many}
+;                  :spouse {:db/cardinality :db.cardinality/one
+;                           :db/valueType   :db.type/ref}
+;                  :child  {:db/cardinality :db.cardinality/many
+;                           :db/valueType   :db.type/ref}})
+;    [{:name "Peter Parker" :gender "M" :alias ["Spider-Man" "Spidey"]}
+;     {:name "Richard Parker" :gender "M" :spouse {:name "Mary Parker"}}
+;     {:name "Mary Parker" :gender "F" :spouse {:name "Richard Parker"}}
+;     {:name "Ben Parker" :gender "M" :spouse {:name "May Parker"}}
+;     {:name "May Parker" :gender "F" :spouse {:name "Ben Parker"}}
+;     {:name "Richard Parker" :child [:name "Peter Parker"]}
+;     {:name "Mary Parker" :child [:name "Peter Parker"]}
+;     {:name "Grandpa Parker" :child [[:name "Ben Parker"]
+;                                     [:name "Richard Parker"]]}]))
 
 (d/q
   '[:find [?uncle-name ...]
