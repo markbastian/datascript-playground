@@ -2,14 +2,6 @@
   (:require [datascript.db :as db]
             [datascript.core :as d]))
 
-(d/db-with
-  (db/empty-db {:powers {:db/cardinality :db.cardinality/many}
-                :weapons {:db/cardinality :db.cardinality/many}})
-  [{:name    "Batman"
-    :alias   "Bruce Wayne"
-    :powers  ["Rich"]
-    :weapons ["Belt" "Kryptonite Spear"]}])
-
 (def parker-family
   (d/db-with
     (db/empty-db {:name   {:db/unique :db.unique/identity}
@@ -29,8 +21,8 @@
      {:child  [{:name "Ben Parker"}
                {:name "Richard Parker"}]
       :gender "M"}
-     {:child [{:name "Ben Parker"}
-              {:name "Richard Parker"}]
+     {:child  [{:name "Ben Parker"}
+               {:name "Richard Parker"}]
       :gender "F"}]))
 
 [{:name "Peter Parker" :gender "M" :alias ["Spider-Man" "Spidey"]}
@@ -43,8 +35,8 @@
  {:child  [{:name "Ben Parker"}
            {:name "Richard Parker"}]
   :gender "M"}
- {:child [{:name "Ben Parker"}
-          {:name "Richard Parker"}]
+ {:child  [{:name "Ben Parker"}
+           {:name "Richard Parker"}]
   :gender "F"}]
 
 (d/q
@@ -68,6 +60,26 @@
     [?grandparent :child ?parent-sibling]
     [(not= ?parent ?parent-sibling)]]
   parker-family [:alias "Spidey"])
+
+(d/pull parker-family '[*] 4)
+(d/pull parker-family '[*] [:name "Ben Parker"])
+(d/pull parker-family '[*] [:name "Richard Parker"])
+(d/pull parker-family '[*] [:name "Peter Parker"])
+(d/pull parker-family '[{:_child [*]}] [:name "Peter Parker"])
+(d/pull parker-family '[{:_child
+                         [{:_child
+                           [{:child [:name]}]}]}]
+        [:name "Peter Parker"])
+
+;Using backreferences, walk back two generations
+(let [{parents :_child} (d/entity parker-family [:alias "Spidey"])
+      grandparents (mapcat :_child parents)]
+  (->> grandparents
+       (mapcat :child)  ;Get all children of the grandparents
+       distinct         ;Remove duplicates
+       (remove parents) ;Remove the parents from the results
+       (map :name)))    ;Get the names of the resulting entities
+
 
 ;(def parker-family
 ;  (d/db-with

@@ -20,7 +20,9 @@
                  ;[helpshift/gulfstream "0.2.1"]
                  ;Clojurescript deps
                  [org.clojure/clojurescript "1.10.339"]
-                 [reagent "0.8.1"]]
+                 [reagent "0.8.1"]
+                 ;Serialization
+                 [datascript-transit "0.2.2"]]
 
   :plugins [[lein-figwheel "0.5.16"]
             [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]

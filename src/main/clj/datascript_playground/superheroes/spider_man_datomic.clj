@@ -37,7 +37,7 @@
   [{:db/id "datomic.tx" :db/txInstant #inst "2000-01-01"}
    {:name   "Peter Parker"
     :gender "M"
-    :status :dweeb}
+    :status :kid}
    {:name "Richard Parker" :gender "M" :spouse {:name "Mary Parker"}}
    {:name "Mary Parker" :gender "F" :spouse {:name "Richard Parker"}}
    {:name "Ben Parker" :gender "M" :spouse {:name "May Parker"}}
@@ -54,7 +54,6 @@
 (def hero-moment-data
   [{:db/id "datomic.tx" :db/txInstant #inst "2001-01-05"}
    {:name   "Peter Parker"
-    :gender "M"
     :status :spider-man
     :alias  ["Spider-Man" "Spidey"]}
    {:name   "Ben Parker"
@@ -74,13 +73,12 @@
 (d/create-database "datomic:mem://parker")
 
 (def conn (d/connect "datomic:mem://parker"))
-
-@(d/transact conn schema)
-@(d/transact conn initial-data)
-@(d/transact conn spider-bite-data)
-@(d/transact conn hero-moment-data)
-@(d/transact conn girlfriend-1-data)
-@(d/transact conn girlfriend-2-data)
+(d/transact conn schema)
+(d/transact conn initial-data)
+(d/transact conn spider-bite-data)
+(d/transact conn hero-moment-data)
+(d/transact conn girlfriend-1-data)
+(d/transact conn girlfriend-2-data)
 
 (d/pull (d/db conn) '[{:girlfriend [*]}] [:name "Peter Parker"])
 
@@ -111,7 +109,7 @@
   gf-query
   (d/as-of (d/db conn) #inst "2001-05-01"))
 
-;Look at the stutus history
+;Examine the status times
 (def status-query
   '[:find ?status ?time
     :where
@@ -119,7 +117,7 @@
     [?e :status ?status ?t true]
     [?t :db/txInstant ?time]])
 
-;A basic query
+;A basic status query
 (d/q status-query (d/db conn))
 
 (let [current-db (d/db conn)
