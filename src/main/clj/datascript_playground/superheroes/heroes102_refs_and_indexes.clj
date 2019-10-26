@@ -42,7 +42,8 @@
 (d/pull hero-db
         '[*
           {:hero/powers [:power/name]}
-          {:hero/publisher [:publisher/name]}]
+          {:hero/publisher [:publisher/name]}
+          ]
         [:hero/name "Yoda"])
 
 ;Dramatically smaller due to refs on powers
