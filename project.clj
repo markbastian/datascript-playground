@@ -3,23 +3,23 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0"]
-                 [datascript "0.16.6"]
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [datascript "0.18.7"]
                  [clojure-csv/clojure-csv "2.0.2"]
-                 [clj-time "0.14.4"]
-                 [digest "1.4.8"]
+                 [clj-time "0.15.2"]
+                 [digest "1.4.9"]
                  [hickory "0.7.1"]
                  [clojure-csv/clojure-csv "2.0.2"]
                  [com.clojure-goes-fast/clj-memory-meter "0.1.2"]
                  ;For comparison
                  [com.datomic/datomic-free "0.9.5697"]
                  [com.google.guava/guava "26.0-jre"]
-                 [org.clojure/java.jdbc "0.7.5"]
-                 [com.h2database/h2 "1.4.197"]
+                 [org.clojure/java.jdbc "0.7.10"]
+                 [com.h2database/h2 "1.4.200"]
                  ;Graph stuff
                  ;[helpshift/gulfstream "0.2.1"]
                  ;Clojurescript deps
-                 [org.clojure/clojurescript "1.10.339"]
+                 [org.clojure/clojurescript "1.10.520"]
                  [reagent "0.8.1"]]
 
   :plugins [[lein-figwheel "0.5.16"]
@@ -31,9 +31,9 @@
   :jar-exclusions [#"\.swp|\.swo|\.DS_Store"]
 
   :profiles {:uberjar {:aot :all}
-             :dev {:dependencies [[cider/piggieback "0.3.9"]
-                                  [nrepl "0.4.5"]
-                                  [figwheel-sidecar "0.5.16"]]
+             :dev {:dependencies [[cider/piggieback "0.4.2"]
+                                  [nrepl "0.6.0"]
+                                  [figwheel-sidecar "0.5.19"]]
                    :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}}
 
   :cljsbuild {:builds [{:id           "dev"
