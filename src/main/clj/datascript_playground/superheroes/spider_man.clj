@@ -25,6 +25,13 @@
                {:name "Richard Parker"}]
       :gender "F"}]))
 
+;To demonstrate retraction of facts, use the following example. Note that since :name is a unique key you can use
+;lookup refs (the name). Otherwise, you'd need to explicitly find and use the db/id.
+(def parker-family-with-retraction
+  (d/db-with
+    parker-family
+    [[:db/retract [:name "Mary Parker"] :child [:name "Peter Parker"]]]))
+
 [{:name "Peter Parker" :gender "M" :alias ["Spider-Man" "Spidey"]}
  {:name "Richard Parker" :gender "M" :spouse {:name "Mary Parker"}}
  {:name "Mary Parker" :gender "F" :spouse {:name "Richard Parker"}}
@@ -75,10 +82,10 @@
 (let [{parents :_child} (d/entity parker-family [:alias "Spidey"])
       grandparents (mapcat :_child parents)]
   (->> grandparents
-       (mapcat :child)  ;Get all children of the grandparents
-       distinct         ;Remove duplicates
-       (remove parents) ;Remove the parents from the results
-       (map :name)))    ;Get the names of the resulting entities
+       (mapcat :child)                                      ;Get all children of the grandparents
+       distinct                                             ;Remove duplicates
+       (remove parents)                                     ;Remove the parents from the results
+       (map :name)))                                        ;Get the names of the resulting entities
 
 
 ;(def parker-family
