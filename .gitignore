@@ -11,3 +11,4 @@ pom.xml.asc
 /.idea
 .DS_Store
 *.log
+/tmp

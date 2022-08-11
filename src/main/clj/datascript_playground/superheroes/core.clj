@@ -29,7 +29,8 @@
                     (cond-> weight (update :weight edn/read-string))))))))
 
 (def hero-powers
-  (let [[h & r] (-> "datascript_playground/superheroes/super_hero_powers.csv" io/resource slurp csv/parse-csv)
+  (let [filename "datascript_playground/superheroes/super_hero_powers.csv"
+        [h & r] (-> filename io/resource slurp csv/parse-csv)
         cols (map kwize h)]
     (map
       (fn [row]
