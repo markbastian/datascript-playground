@@ -28,7 +28,7 @@
 ;; fact: a thing that is known or proved to be true.
 ;; en·ti·ty: a thing with distinct and independent existence.
 ;;
-;; It is easy to reason about entities -- I can trivially describe thing.
+;; It is easy to reason about entities -- I can trivially describe things.
 ;; On the flip side, it isn't always easy to establish identity for entities.
 ;;
 ;;
