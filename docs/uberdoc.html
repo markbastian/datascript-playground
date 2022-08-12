@@ -2868,7 +2868,8 @@ net.brehaut.ClojureTools = (function (SH) {
 </script><title>datascript-playground -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name"><a href="http://example.com/FIXME">datascript-playground</a></h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>FIXME: write description</p>
 </div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.11.1</td></tr><tr><td class="dep-name">datascript</td><td class="dotted"><hr /></td><td class="dep-version">1.3.13</td></tr><tr><td class="dep-name">clojure-csv/clojure-csv</td><td class="dotted"><hr /></td><td class="dep-version">2.0.2</td></tr><tr><td class="dep-name">clj-time</td><td class="dotted"><hr /></td><td class="dep-version">0.15.2</td></tr><tr><td class="dep-name">digest</td><td class="dotted"><hr /></td><td class="dep-version">1.4.10</td></tr><tr><td class="dep-name">hickory</td><td class="dotted"><hr /></td><td class="dep-version">0.7.1</td></tr><tr><td class="dep-name">clojure-csv/clojure-csv</td><td class="dotted"><hr /></td><td class="dep-version">2.0.2</td></tr><tr><td class="dep-name">com.clojure-goes-fast/clj-memory-meter</td><td class="dotted"><hr /></td><td class="dep-version">0.2.1</td></tr><tr><td class="dep-name">com.datomic/datomic-free</td><td class="dotted"><hr /></td><td class="dep-version">0.9.5697</td></tr><tr><td class="dep-name">com.google.guava/guava</td><td class="dotted"><hr /></td><td class="dep-version">31.1-jre</td></tr><tr><td class="dep-name">org.clojure/java.jdbc</td><td class="dotted"><hr /></td><td class="dep-version">0.7.12</td></tr><tr><td class="dep-name">com.h2database/h2</td><td class="dotted"><hr /></td><td class="dep-version">2.1.214</td></tr><tr><td class="dep-name">org.clojure/clojurescript</td><td class="dotted"><hr /></td><td class="dep-version">1.11.60</td></tr><tr><td class="dep-name">reagent</td><td class="dotted"><hr /></td><td class="dep-version">1.1.1</td></tr><tr><td class="dep-name">datascript-transit</td><td class="dotted"><hr /></td><td class="dep-version">0.3.0</td></tr><tr><td class="dep-name">io.replikativ/datahike</td><td class="dotted"><hr /></td><td class="dep-version">0.5.1507</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#datascript-playground.fact-stores.facts">datascript-playground.fact-stores.facts</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#datascript-playground.fact-stores.facts" name="datascript-playground.fact-stores.facts"><h1 class="project-name">datascript-playground.fact-stores.facts</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ns datascript-playground.fact-stores.facts
-  (:require [datascript.core :as d]))</pre></td></tr><tr><td class="docs"><h1>Datalogs / Fact Stores</h1>
+  (:require [datascript.core :as ds]
+            [datomic.api :as d]))</pre></td></tr><tr><td class="docs"><h1>Datalogs / Fact Stores</h1>
 
 <p>Consider the challenges of data modeling</p>
 
@@ -2896,18 +2897,582 @@ net.brehaut.ClojureTools = (function (SH) {
 <p>This is the challenge with relational modeling. It's all about defining what
 something is (putting things in boxes) and formalizing relationships.</p>
 
-<h1>Facts and Entities</h1>
+<h2>The Other Extreme: Document Stores</h2>
 
-<p>fact: a thing that is known or proved to be true.
-en·ti·ty: a thing with distinct and independent existence.</p>
+<p>You can store your data representation as plain old JSON. The primary
+weakness of this approach is that really don't have many of your important
+db concepts, such as identity (primary keys) or relations (foreign keys).
+The only real relations are the paths.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><h2>An alternate approach: Facts and Entities / Entity Modeling</h2>
 
-<p>It is easy to reason about entities -- I can trivially describe thing.
-On the flip side, it isn't always easy to establish identity for entities.</p>
+<p>fact: a thing that is known or proved to be true.</p>
+
+<p>en·ti·ty: a thing with distinct and independent existence.</p>
+
+<p>Entity modeling is all about asserting facts about entities. An entity is
+just an object with a unique identity (usually a db concern). As we'll see,
+facts are just attributes of an entity in time (implicit or explicit).</p>
+
+<p>What's great about entity modeling?</p>
+
+<ul>
+<li>It is easy to reason about entities -- I can trivially describe things.</li>
+<li>Schema is only on attributes -- there are no "boxes"</li>
+<li>It is easy to convert from entities &lt;-> documents</li>
+</ul>
+
+<p>Weaknesses</p>
+
+<ul>
+<li>Establishing identity can be challenging
+<ul><li>What attribute or attributes uniquely identify an entity?</li></ul></li>
+<li>It can become attribute soup</li>
+</ul>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Example, this is easy to read, describe, and model</p>
+</td><td class="codes"><pre class="brush: clojure">(def dc-entities
+  [{:name            &quot;Batman&quot;
+    :age             32
+    :gender          &quot;M&quot;
+    :secret-identity &quot;Bruce Wayne&quot;
+    :powers          [&quot;Rich&quot;]
+    :weapons         [&quot;Belt&quot; &quot;Kryptonite Spear&quot;]
+    :alignment       &quot;Chaotic Good&quot;
+    :nemesis         [{:name &quot;Joker&quot;}
+                      {:name &quot;Penguin&quot;}]}
+   {:name            &quot;Joker&quot;
+    :secret-identity &quot;Jack Napier&quot;
+    :alignment       &quot;Chaotic Evil&quot;
+    :nemesis         [{:name &quot;Batman&quot;}]}])</pre></td></tr><tr><td class="docs"><p>This is just maps, though, and is just a document-based approach without some
+additional secret sauce. We'll need to do a little massaging to get to
+entities. However, the only thing that's really missing is a stable id.
+This could be as simple as each map having an :id attribute. Our engine will
+take care of this for us, though.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><h3>Getting into the details.../Deriving Datalog</h3>
+
+<p>fact (alt): A stable value in time</p>
+
+<p>Examples of facts:</p>
+
+<p>Batman's secret identity is Bruce Wayne
+The Joker's nemesis is Batman</p>
+
+<p>Note that to be truly "factual" we need a time element:</p>
+
+<p>On March 30, 1939, Bruce Wayne took on the alias of Batman
+On April 25, 1940, the Joker became Batman's nemesis</p>
+
+<p>We can represent any fact about any entity using a simple 3 or 4 tuple
+notation (EAV or EAVT):</p>
+
+<ul>
+<li>Entity - An arbitrary, stable id used to represent an entity</li>
+<li>Attribute</li>
+<li>Value</li>
+<li>Time (Note the T is <em>system</em> time, not <em>event</em> time.)</li>
+</ul>
+
+<p>Using the above examples of facts (We'll make Batman entity 1 and the Joker
+entity 2):</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>As 3-Tuples</p>
+</td><td class="codes"><pre class="brush: clojure">[1 :name &quot;Batman&quot;]
+[1 :secret-identity &quot;Bruce Wayne&quot;]
+[2 :name &quot;Joker&quot;]
+[2 :nemesis 1]                                              ;Note the entity ref</pre></td></tr><tr><td class="docs"><p>Note the entity ref</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>As 4-Tuples</p>
+</td><td class="codes"><pre class="brush: clojure">[1 :name &quot;Batman&quot; &quot;March 30, 1939&quot;]
+[1 :secret-identity &quot;Bruce Wayne&quot; &quot;March 30, 1939&quot;]
+[2 :name &quot;Joker&quot; &quot;April 25, 1940&quot;]
+[2 :nemesis 1 &quot;April 25, 1940&quot;]                             ;Note the entity ref</pre></td></tr><tr><td class="docs"><p>Note the entity ref</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Note: T is <em>system</em> time - when the system knew the fact, not necessarily
+when it became true (Which isn't quite what I show above).</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The addition of a time field allows us to say when our system knows something
+is true. This makes our database "temporal" -- Datomic and Datahike support
+this. XTDB also supports the notion of event time and is "bitemporal" but
+this is beyond the scope of this presentation.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>If T is not present the assumption is that you've reached some stable point
+in time (e.g. "right now this is all true").</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>It's trivial to convert maps to tuple format</p>
+</td><td class="codes"><pre class="brush: clojure">(def dc-eav
+  (-&gt;&gt; dc-entities
+       (map-indexed (fn [i e] (mapv (fn [[a v]] [i a v]) e)))
+       (apply concat)
+       vec))</pre></td></tr><tr><td class="docs"><p>This produces:</p>
 </td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">[[0 :name &quot;Batman&quot;]
+ [0 :age 32]
+ [0 :gender &quot;M&quot;]
+ [0 :secret-identity &quot;Bruce Wayne&quot;]
+ [0 :powers [&quot;Rich&quot;]]
+ [0 :weapons [&quot;Belt&quot; &quot;Kryptonite Spear&quot;]]
+ [0 :alignment &quot;Chaotic Good&quot;]
+ [0 :nemesis [{:name &quot;Joker&quot;} {:name &quot;Penguin&quot;}]]
+ [1 :name &quot;Joker&quot;]
+ [1 :secret-identity &quot;Jack Napier&quot;]
+ [1 :alignment &quot;Chaotic Evil&quot;]
+ [1 :nemesis [{:name &quot;Batman&quot;}]]]</pre></td></tr><tr><td class="docs"><p>Note that we aren't quite there, yet. I want weapons, powers, and nemesis to
+be individual values and I want nemesis values to refer to their entities.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>It's also easy to go back</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(-&gt;&gt;
+  [[0 :name &quot;Batman&quot;]
+   [0 :age 32]
+   [0 :gender &quot;M&quot;]
+   [0 :secret-identity &quot;Bruce Wayne&quot;]
+   [0 :powers [&quot;Rich&quot;]]
+   [0 :weapons [&quot;Belt&quot; &quot;Kryptonite Spear&quot;]]
+   [0 :alignment &quot;Chaotic Good&quot;]
+   [0 :nemesis [{:name &quot;Joker&quot;} {:name &quot;Penguin&quot;}]]
+   [1 :name &quot;Joker&quot;]
+   [1 :secret-identity &quot;Jack Napier&quot;]
+   [1 :alignment &quot;Chaotic Evil&quot;]
+   [1 :nemesis [{:name &quot;Batman&quot;}]]]
+  (group-by first)
+  (map (fn [[k v]]
+         (assoc (reduce (fn [m [_ a v]] (assoc m a v)) {} v) :id k))))</pre></td></tr><tr><td class="docs"><h3>Datoms (the basis of all of the *logs)</h3>
+
+<p>The above tuples (called "Datoms") form the basis for any of our datalog
+engines. We can easily see this by transacting some data into a datascript db
+and viewing the db in a REPL. Note that the details of datom management are
+handled by the engine. You generally just deal with objects and their
+corresponding schemas. In fact, you can transact full documents (with
+nesting) and the engine will do the unpacking for you.</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/empty-db)
+    (ds/db-with [{:name &quot;Batman&quot; :secret-identity &quot;Bruce Wayne&quot;}]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/empty-db)
+    (ds/db-with dc-entities))</pre></td></tr><tr><td class="docs"><p>However, there are a couple gaps in how we specify attributes</p>
+
+<ul>
+<li>We need to specify identity</li>
+<li>We need to specify cardinality</li>
+<li>We need to specify relations</li>
+</ul>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Example with no identity. Note that there are two "Batman" entities.</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/empty-db)
+    (ds/db-with (conj
+                  dc-entities
+                  {:name &quot;Batman&quot;
+                   :age  100})))</pre></td></tr><tr><td class="docs"><p>Adding a :db/unique constraint now allows me to talk about an entity
+without using the entity id.</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/empty-db
+      {:name {:db/unique :db.unique/identity}})
+    (ds/db-with (conj
+                  dc-entities
+                  ;This becomes an update
+                  {:name &quot;Batman&quot; :age 100})))</pre></td></tr><tr><td class="docs"><p>We also want to specify that weapons, powers, and nemesis are attributes with
+cardinality many rather than storing the collections themselves. This way we
+can do queries to see who has certain powers, weapons, etc.</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/empty-db
+      {:name    {:db/unique :db.unique/identity}
+       :weapons {:db/cardinality :db.cardinality/many}
+       :powers  {:db/cardinality :db.cardinality/many}
+       :nemesis {:db/cardinality :db.cardinality/many}})
+    (ds/db-with dc-entities))</pre></td></tr><tr><td class="docs"><p>Finally, we want to refer to other entities directly.</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/empty-db
+      {:name    {:db/unique :db.unique/identity}
+       :weapons {:db/cardinality :db.cardinality/many}
+       :powers  {:db/cardinality :db.cardinality/many}
+       :nemesis {:db/cardinality :db.cardinality/many
+                 :db/valueType   :db.type/ref}})
+    (ds/db-with dc-entities))</pre></td></tr><tr><td class="docs"><p>Another useful schema element is the tuple type, representing composite keys.
+You can get a good overview of datascript schemas
+<a href="https://tinyurl.com/2p8spjmh">here</a>. There are a few other useful
+attributes, but we've covered the most important ones.</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/empty-db
+      {:full-name {:db/valueType  :db.type/tuple
+                   :db/tupleAttrs [:first-name :last-name]
+                   :db/unique     :db.unique/identity}})
+    (ds/db-with [{:first-name &quot;Mark&quot;
+                  :last-name  &quot;Bastian&quot;}]))</pre></td></tr><tr><td class="docs"><p>You can unpack on the fly. All referenced entity attributes are appropriately
+grouped.</p>
+</td><td class="codes"><pre class="brush: clojure">(def dc-db
+  (-&gt; (ds/empty-db
+        {:name    {:db/unique :db.unique/identity}
+         :weapons {:db/cardinality :db.cardinality/many}
+         :powers  {:db/cardinality :db.cardinality/many}
+         :nemesis {:db/cardinality :db.cardinality/many
+                   :db/valueType   :db.type/ref}})
+      (ds/db-with [{:name            &quot;Batman&quot;
+                    :age             32
+                    :gender          &quot;M&quot;
+                    :secret-identity &quot;Bruce Wayne&quot;
+                    :powers          [&quot;Rich&quot;]
+                    :weapons         [&quot;Belt&quot; &quot;Kryptonite Spear&quot;]
+                    :alignment       &quot;Chaotic Good&quot;
+                    :nemesis         [{:name            &quot;Joker&quot;
+                                       :secret-identity &quot;Jack Napier&quot;
+                                       :alignment       &quot;Chaotic Evil&quot;
+                                       :nemesis         [{:name &quot;Batman&quot;}]
+                                       :weapons         [&quot;Knife&quot;]}
+                                      {:name &quot;Penguin&quot;}
+                                      {:name    &quot;Riddler&quot;
+                                       :weapons [&quot;Wit&quot;]}]}
+                   {:name   &quot;Riddler&quot;
+                    :powers [&quot;Riddlin'&quot;]}])))</pre></td></tr><tr><td class="docs"><p>Let's make it a little more interesting...</p>
+</td><td class="codes"><pre class="brush: clojure">(def interesting-dc-entities
+  [{:name            &quot;Batman&quot;
+    :age             32
+    :gender          &quot;M&quot;
+    :secret-identity &quot;Bruce Wayne&quot;
+    :powers          [&quot;Rich&quot;]
+    :weapons         [&quot;Belt&quot; &quot;Kryptonite Spear&quot;]
+    :alignment       &quot;Chaotic Good&quot;
+    :teams           [&quot;Justice League&quot;]
+    :nemesis         [{:name &quot;Joker&quot;}
+                      {:name &quot;Penguin&quot;}
+                      {:name &quot;Riddler&quot;}]}
+   {:name            &quot;Joker&quot;
+    :powers          [&quot;Joking&quot;]
+    :secret-identity &quot;Jack Napier&quot;
+    :alignment       &quot;Chaotic Evil&quot;
+    :nemesis         [{:name &quot;Batman&quot;}]
+    :weapons         [&quot;Knife&quot;]}
+   {:name   &quot;Penguin&quot;
+    :powers [&quot;Swimming&quot;]}
+   {:name   &quot;Riddler&quot;
+    :powers [&quot;Riddlin'&quot;]}
+   {:name    &quot;Aquaman&quot;
+    :powers  [&quot;Swimming&quot; &quot;Fish Speaking&quot;]
+    :nemesis [{:name &quot;Black Manta&quot;}]
+    :teams   [&quot;Justice League&quot;]
+    :weapons [&quot;Trident&quot;]}
+   {:name    &quot;Black Manta&quot;
+    :powers  [&quot;Swimming&quot;]
+    :weapons [&quot;Trident&quot;]}
+   {:name   &quot;Wonder Woman&quot;
+    :teams  [&quot;Justice League&quot;]
+    :powers [&quot;Flying&quot;]}
+   {:name    &quot;Superman&quot;
+    :nemesis [{:name &quot;Zod&quot;}
+              {:name &quot;Faora&quot;}]
+    :teams   [&quot;Justice League&quot;]
+    :powers  [&quot;Flying&quot; &quot;Strength&quot; &quot;X-Ray Vision&quot; &quot;Laser Eyes&quot;]}
+   {:name   &quot;Zod&quot;
+    :powers [&quot;Flying&quot; &quot;Strength&quot; &quot;X-Ray Vision&quot; &quot;Laser Eyes&quot;]}
+   {:name   &quot;Faora&quot;
+    :powers [&quot;Flying&quot; &quot;Strength&quot; &quot;X-Ray Vision&quot; &quot;Laser Eyes&quot;]}])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def dc-db
+  (-&gt; (ds/empty-db
+        {:name    {:db/unique :db.unique/identity}
+         :weapons {:db/cardinality :db.cardinality/many}
+         :powers  {:db/cardinality :db.cardinality/many}
+         :teams   {:db/cardinality :db.cardinality/many}
+         :nemesis {:db/cardinality :db.cardinality/many
+                   :db/valueType   :db.type/ref}})
+      (ds/db-with interesting-dc-entities)))</pre></td></tr><tr><td class="docs"><h1>Retraction</h1>
+
+<p>Until now, we've implicitly shown assertion. You can also retract facts.</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/db-with
+  dc-db
+  [[:db/retract [:name &quot;Batman&quot;] :nemesis [:name &quot;Joker&quot;]]])</pre></td></tr><tr><td class="docs"><p>And you can retract entire entities - Note that the entity and all references
+to it are gone.</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/db-with dc-db [[:db/retractEntity [:name &quot;Joker&quot;]]])</pre></td></tr><tr><td class="docs"><h1>Queries</h1>
+
+<p>There are <em>generally</em> 3 ways you can query these dbs:</p>
+
+<ul>
+<li>The entity api (Not supported by Datomic Cloud :()</li>
+<li>The pull api</li>
+<li>Datalog queries (q)</li>
+</ul>
+</td><td class="codes"></td></tr><tr><td class="docs"><h2>The Entity API</h2>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/entity dc-db 1) :name)</pre></td></tr><tr><td class="docs"><p>Nobody thinks in terms of entity ids (and you don't want to expose your db
+internals. Instead, use "Lookup Refs," a tuple of [attr val] for any
+db.unique attribute.</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/entity dc-db [:name &quot;Batman&quot;]) :name)</pre></td></tr><tr><td class="docs"><p>The entity API is basically a graph api across all refs</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt;&gt; (ds/entity dc-db [:name &quot;Batman&quot;])
+     :nemesis
+     (map :name))</pre></td></tr><tr><td class="docs"><p>The entity API is basically a graph api across all refs</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt;&gt; (ds/entity dc-db [:name &quot;Batman&quot;])
+     :nemesis
+     (map :name))</pre></td></tr><tr><td class="docs"><p>Let's combo this with retraction</p>
+</td><td class="codes"><pre class="brush: clojure">(let [db (ds/db-with dc-db [[:db/retract [:name &quot;Batman&quot;] :nemesis [:name &quot;Joker&quot;]]])]
+  (-&gt;&gt; (ds/entity db [:name &quot;Batman&quot;])
+       :nemesis
+       (map :name)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(let [db (ds/db-with dc-db [[:db/retractEntity [:name &quot;Riddler&quot;]]])]
+  (-&gt;&gt; (ds/entity db [:name &quot;Batman&quot;])
+       :nemesis
+       (map :name)))</pre></td></tr><tr><td class="docs"><p>You can also do backrefs on any ref attribute (this is stored in the indexes)</p>
+</td><td class="codes"><pre class="brush: clojure">(-&gt;&gt; (ds/entity dc-db [:name &quot;Batman&quot;])
+     :nemesis
+     (mapcat :_nemesis)
+     distinct
+     (map :name))</pre></td></tr><tr><td class="docs"><h2>The Pull API</h2>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Get all the attributes</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/pull dc-db '[*] [:name &quot;Superman&quot;])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ds/pull dc-db '[:teams :powers] [:name &quot;Superman&quot;])</pre></td></tr><tr><td class="docs"><p>Not shown here, but pull syntax can be deeply nested. I personally prefer q
+when doing these types of data queries. There's also some great examples of
+pull <a href="https://tinyurl.com/366a3h9p">here</a>.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>The Query API</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/q
+  '[:find ?e
+    :in $ ?name
+    :where
+    [?e :name ?name]]
+  dc-db &quot;Batman&quot;)</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(ds/q
+  '[:find ?nemesis-name ?power
+    :in $ ?name
+    :where
+    [?e :name ?name]
+    [?e :nemesis ?nemesis]
+    [?nemesis :name ?nemesis-name]
+    [?nemesis :powers ?power]]
+  dc-db &quot;Batman&quot;)</pre></td></tr><tr><td class="docs"><p>Find nemesis pair where both have the same power</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/q
+  '[:find ?hero-name ?villain-name ?power-name
+    :keys hero-name villain-name power-name
+    :in $
+    :where
+    [?hero :name ?hero-name]
+    [?hero :powers ?power-name]
+    [?hero :nemesis ?villain]
+    [?villain :powers ?power-name]
+    [?villain :name ?villain-name]]
+  dc-db)</pre></td></tr><tr><td class="docs"><p>Now let's switch to a different data set to show the power of some pretty
+advanced queries.</p>
+</td><td class="codes"><pre class="brush: clojure">(def parker-family
+  (ds/db-with
+    (ds/empty-db {:name   {:db/unique :db.unique/identity}
+                  :alias  {:db/unique      :db.unique/identity
+                           :db/cardinality :db.cardinality/many}
+                  :spouse {:db/cardinality :db.cardinality/one
+                           :db/valueType   :db.type/ref}
+                  :child  {:db/cardinality :db.cardinality/many
+                           :db/valueType   :db.type/ref}})
+    [{:name &quot;Peter Parker&quot; :gender &quot;M&quot; :alias [&quot;Spider-Man&quot; &quot;Spidey&quot;]}
+     {:name &quot;Richard Parker&quot; :gender &quot;M&quot; :spouse {:name &quot;Mary Parker&quot;}}
+     {:name &quot;Mary Parker&quot; :gender &quot;F&quot; :spouse {:name &quot;Richard Parker&quot;}}
+     {:name &quot;Ben Parker&quot; :gender &quot;M&quot; :spouse {:name &quot;May Parker&quot;}}
+     {:name &quot;May Parker&quot; :gender &quot;F&quot; :spouse {:name &quot;Ben Parker&quot;}}
+     {:name &quot;Richard Parker&quot; :child {:name &quot;Peter Parker&quot;}}
+     {:name &quot;Mary Parker&quot; :child {:name &quot;Peter Parker&quot;}}
+     {:name   &quot;Richard's Dad&quot;
+      :child  [{:name &quot;Ben Parker&quot;}
+               {:name &quot;Richard Parker&quot;}]
+      :gender &quot;M&quot;}
+     {:name   &quot;Richard's Mom&quot;
+      :child  [{:name &quot;Ben Parker&quot;}
+               {:name &quot;Richard Parker&quot;}]
+      :gender &quot;F&quot;}]))</pre></td></tr><tr><td class="docs"><p>One thing that is really nice about datalog queries is that they are data, so
+you can store and reuse them.</p>
+</td><td class="codes"><pre class="brush: clojure">(def uncle-query
+  '[:find [?uncle-name ...]
+    :in $ ?person
+    :where
+    ; ?person is Peter Parker based on the lookup ref in the input.
+    ; Get his parent (this will bind to both Richard and Mary)
+    [?parent :child ?person]
+    ; For that parent, there exists a ?grandparent entity whose child is ?parent
+    [?grandparent :child ?parent]
+    ; For that ?grandparent entity bind to all children as ?uncle
+    [?grandparent :child ?uncle]
+    ; The ?uncle is male
+    [?uncle :gender &quot;M&quot;]
+    ; The ?uncle is also not Peter's parent.
+    [(not= ?parent ?uncle)]
+    ; Get the :name attribute as ?uncle-name
+    [?uncle :name ?uncle-name]])</pre></td></tr><tr><td class="docs"><p>Who is Peter Parker's uncle?</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/q uncle-query parker-family [:name &quot;Peter Parker&quot;])</pre></td></tr><tr><td class="docs"><p>Using recursive rules we can get all of Peter's ancestors</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/q
+  '[:find ?ancestor-name
+    :in $ % ?person
+    :where
+    (ancestor ?a ?person)
+    [?a :name ?ancestor-name]]
+  parker-family
+  '[[(ancestor ?p ?c)
+     [?p :child ?c]]
+    [(ancestor ?gp ?gc)
+     [?gp :child ?c]
+     (ancestor ?c ?gc)]]
+  [:name &quot;Peter Parker&quot;])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def marvel-db
+  (-&gt; (ds/empty-db
+        {:name    {:db/unique :db.unique/identity}
+         :weapons {:db/cardinality :db.cardinality/many}
+         :powers  {:db/cardinality :db.cardinality/many}
+         :teams   {:db/cardinality :db.cardinality/many}
+         :nemesis {:db/cardinality :db.cardinality/many
+                   :db/valueType   :db.type/ref}})
+      (ds/db-with [{:name            &quot;Wolverine&quot;
+                    :secret-identity &quot;Logan&quot;
+                    :powers          [&quot;Regeneration&quot;]
+                    :weapons         [&quot;Claws&quot;]
+                    :alignment       &quot;Chaotic Good&quot;
+                    :teams           [&quot;X-Men&quot;]
+                    :nemesis         [{:name &quot;Magneto&quot;}
+                                      {:name &quot;Sabretooth&quot;}]}
+                   {:name            &quot;Storm&quot;
+                    :secret-identity &quot;Logan&quot;
+                    :powers          [&quot;Flying&quot; &quot;Weather Control&quot;]
+                    :alignment       &quot;Lawful Good&quot;
+                    :teams           [&quot;X-Men&quot;]
+                    :nemesis         [{:name &quot;Magneto&quot;}
+                                      {:name &quot;Sabretooth&quot;}]}])))</pre></td></tr><tr><td class="docs"><p>Cross-db queries (Not in datomic cloud)</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/q
+  '[:find ?dc-name ?marvel-name ?power
+    :in $dc $marvel
+    :where
+    [$dc ?ed :powers ?power]
+    [$marvel ?em :powers ?power]
+    [$dc ?ed :name ?dc-name]
+    [$marvel ?em :name ?marvel-name]]
+  dc-db marvel-db)</pre></td></tr><tr><td class="docs"><h2>Practical Use</h2>
+
+<p>Define the schema</p>
+</td><td class="codes"><pre class="brush: clojure">(def superhero-schema
+  {:name    {:db/unique :db.unique/identity}
+   :weapons {:db/cardinality :db.cardinality/many}
+   :powers  {:db/cardinality :db.cardinality/many}
+   :teams   {:db/cardinality :db.cardinality/many}
+   :nemesis {:db/cardinality :db.cardinality/many
+             :db/valueType   :db.type/ref}})</pre></td></tr><tr><td class="docs"><p>Somewhere define your connection</p>
+</td><td class="codes"><pre class="brush: clojure">(def ds-conn (ds/create-conn superhero-schema))</pre></td></tr><tr><td class="docs"><p>Transact the data
+db-before and db-after are the dsdb pre and post tx
+tx-data are the datoms that were added or removed [true or false]
+tempids are any ids that were temporarily created
+(note that you can provide a negative id for new entities if you want to
+represent them that way when transacting)
+tx-meta - transaction metadata - not sure on these detais</p>
+</td><td class="codes"><pre class="brush: clojure">(let [tx (ds/transact! ds-conn interesting-dc-entities)
+      {:keys [db-before db-after tx-data tempids tx-meta]} tx]
+  tx-data)</pre></td></tr><tr><td class="docs"><p>Just @deref the conn when using</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/entity @ds-conn [:name &quot;Superman&quot;])</pre></td></tr><tr><td class="docs"><h1>Datomic</h1>
+
+<p>Datomic is an enterprise-scale datalog implementation. However, Datascript
+can be used for a lot of production applications. There are two flavors:</p>
+
+<ul>
+<li>Datomic on prem - Uses the peer model. Has all of the above plus time
+travel.</li>
+<li>Datomic cloud - Fully managed, no entity api. No multi-db queries.</li>
+</ul>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Datomic, Datahike (History, disk-backed, write limited), and Datalevin
+(No history, disk-backed, super fast) all use the following schema
+representation. Datascript has no requirements for schema types aside from
+constraints you wish to add, as shown above. The other dbs require schemas
+for every attribute.</p>
+
+<p>Note that the <code>{:db/id "datomic.tx" :db/txInstant #inst "1990-01-01"}</code> is a
+way to play back sequential time-oriented data into datomic with known dates.
+This only works if the times are monotonically ascending.</p>
 </td><td class="codes"><pre class="brush: clojure">(def schema
-  {:name {:db/unique :db.unique/identity}})</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(-&gt; (d/empty-db)
-    (d/db-with [{:name &quot;Batman&quot; :alias &quot;Bruce Wayne&quot;}]))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_datascript-playground.fact-stores.facts">datascript-playground.fact-stores.facts</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+  [{:db/id &quot;datomic.tx&quot; :db/txInstant #inst &quot;1990-01-01&quot;}
+   {:db/ident       :name
+    :db/valueType   :db.type/string
+    :db/unique      :db.unique/identity
+    :db/cardinality :db.cardinality/one}
+   {:db/ident       :gender
+    :db/valueType   :db.type/string
+    :db/cardinality :db.cardinality/one}
+   {:db/ident       :status
+    :db/valueType   :db.type/keyword
+    :db/cardinality :db.cardinality/one}
+   {:db/ident       :alias
+    :db/valueType   :db.type/string
+    :db/unique      :db.unique/value
+    :db/cardinality :db.cardinality/many}
+   {:db/ident       :spouse
+    :db/valueType   :db.type/ref
+    :db/cardinality :db.cardinality/one}
+   {:db/ident       :child
+    :db/valueType   :db.type/ref
+    :db/cardinality :db.cardinality/many}
+   {:db/ident       :girlfriend
+    :db/valueType   :db.type/ref
+    :db/cardinality :db.cardinality/one}])</pre></td></tr><tr><td class="docs"><p>Let's identify some factual events from the life of Peter Parker</p>
+</td><td class="codes"><pre class="brush: clojure">(def initial-data
+  [{:db/id &quot;datomic.tx&quot; :db/txInstant #inst &quot;2000-01-01&quot;}
+   {:name   &quot;Peter Parker&quot;
+    :gender &quot;M&quot;
+    :status :kid}
+   {:name &quot;Richard Parker&quot; :gender &quot;M&quot; :spouse {:name &quot;Mary Parker&quot;}}
+   {:name &quot;Mary Parker&quot; :gender &quot;F&quot; :spouse {:name &quot;Richard Parker&quot;}}
+   {:name &quot;Ben Parker&quot; :gender &quot;M&quot; :spouse {:name &quot;May Parker&quot;}}
+   {:name &quot;May Parker&quot; :gender &quot;F&quot; :spouse {:name &quot;Ben Parker&quot;}}
+   {:name &quot;Richard Parker&quot; :child {:name &quot;Peter Parker&quot;}}
+   {:child {:name &quot;Peter Parker&quot;}}
+   {:child [{:name &quot;Ben Parker&quot;} {:name &quot;Richard Parker&quot;}]}])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def spider-bite-data
+  [{:db/id &quot;datomic.tx&quot; :db/txInstant #inst &quot;2001-01-01&quot;}
+   {:name   &quot;Peter Parker&quot;
+    :status :bitten}])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def hero-moment-data
+  [{:db/id &quot;datomic.tx&quot; :db/txInstant #inst &quot;2001-01-05&quot;}
+   {:name   &quot;Peter Parker&quot;
+    :status :spider-man
+    :alias  [&quot;Spider-Man&quot; &quot;Spidey&quot;]}
+   {:name   &quot;Ben Parker&quot;
+    :status :deceased}])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def girlfriend-1-data
+  [{:db/id &quot;datomic.tx&quot; :db/txInstant #inst &quot;2001-01-11&quot;}
+   {:name       &quot;Peter Parker&quot;
+    :girlfriend {:name &quot;Gwen Stacey&quot;}}])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def girlfriend-2-data
+  [{:db/id &quot;datomic.tx&quot; :db/txInstant #inst &quot;2002-01-01&quot;}
+   {:name       &quot;Peter Parker&quot;
+    :girlfriend {:name &quot;Mary Jane Watson&quot; :alias &quot;MJ Watson&quot;}}])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(d/delete-database &quot;datomic:mem://parker&quot;)
+(d/create-database &quot;datomic:mem://parker&quot;)</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def conn (d/connect &quot;datomic:mem://parker&quot;))
+(d/transact conn schema)
+(d/transact conn initial-data)
+(d/transact conn spider-bite-data)
+(d/transact conn hero-moment-data)
+(d/transact conn girlfriend-1-data)
+(d/transact conn girlfriend-2-data)</pre></td></tr><tr><td class="docs"><p>APIs across the datalog implementations are largely compatible.
+For example...</p>
+</td><td class="codes"><pre class="brush: clojure">(d/q
+  uncle-query
+  (d/db conn)
+  [:name &quot;Peter Parker&quot;])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(d/pull (d/db conn) '[{:girlfriend [*]}] [:name &quot;Peter Parker&quot;])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def gf-query
+  '[:find [?gf-name ...]
+    :where
+    [?e :name &quot;Peter Parker&quot;]
+    [?e :girlfriend ?gf]
+    [?gf :name ?gf-name]])</pre></td></tr><tr><td class="docs"><p>Current girlfriend</p>
+</td><td class="codes"><pre class="brush: clojure">(d/q
+  gf-query
+  (d/db conn))</pre></td></tr><tr><td class="docs"><p>All the girlfriends</p>
+</td><td class="codes"><pre class="brush: clojure">(d/q
+  gf-query
+  (d/history (d/db conn)))</pre></td></tr><tr><td class="docs"><p>Girlfriend before the bite</p>
+</td><td class="codes"><pre class="brush: clojure">(d/q
+  gf-query
+  (d/as-of (d/db conn) #inst &quot;2000-01-01&quot;))</pre></td></tr><tr><td class="docs"><p>Girlfriend before MJ</p>
+</td><td class="codes"><pre class="brush: clojure">(d/q
+  gf-query
+  (d/as-of (d/db conn) #inst &quot;2001-05-01&quot;))</pre></td></tr><tr><td class="docs"><p>Examine the status times</p>
+</td><td class="codes"><pre class="brush: clojure">(def status-query
+  '[:find ?status ?time
+    :where
+    [?e :name &quot;Peter Parker&quot;]
+    [?e :status ?status ?t true]
+    [?t :db/txInstant ?time]])</pre></td></tr><tr><td class="docs"><p>A basic status query</p>
+</td><td class="codes"><pre class="brush: clojure">(d/q status-query (d/db conn))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(let [current-db (d/db conn)
+      full-history-db (d/history current-db)
+      snapshot-db (d/as-of current-db #inst &quot;2001-01-02&quot;)
+      history-at-t-db (d/history snapshot-db)
+      f (fn [db] (vec (sort-by second (d/q status-query db))))]
+  {:current-status         (f current-db)
+   :status-before-ben-dies (f snapshot-db)
+   :full-history-of-status (f full-history-db)
+   :history-until-ben-dies (f history-at-t-db)})</pre></td></tr><tr><td class="docs"><h1>Conclusion</h1>
+
+<p>Entity modeling is a powerful way to represent your domain. Simply make
+assertions about your entity attributes and let the engine do the rest. You
+will avoid the "fit this in an ontology box" problems of relational dbs and
+have the same flexible expressiveness as document stores but with all the
+query power you could want. Depending on your needs for performance,
+persistence, scalability, and temporality you can choose from Datascript,
+Datomic, Datahike, Datalevin, or XTDB.</p>
+</td><td class="codes"></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/gdeer81/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a><div id="floating-toc"><ul><li class="floating-toc-li" id="floating-toc_datascript-playground.fact-stores.facts">datascript-playground.fact-stores.facts</li></ul></div></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
 SyntaxHighlighter.all();
 
 // hackity hack
