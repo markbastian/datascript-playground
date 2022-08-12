@@ -27,7 +27,7 @@
 
   :plugins [[lein-figwheel "0.5.20"]
             [lein-cljsbuild "1.1.8" :exclusions [[org.clojure/clojure]]]
-            [marginalia "0.9.1"]]
+            [lein-marginalia "0.9.1"]]
 
   :source-paths ["src/main/clj" "src/main/cljc"]
   :test-paths ["src/test/clojure"]
@@ -35,10 +35,10 @@
   :jar-exclusions [#"\.swp|\.swo|\.DS_Store"]
 
   :profiles {:uberjar {:aot :all}
-             :dev {:dependencies [[cider/piggieback "0.5.3"]
-                                  [nrepl "0.9.0"]
-                                  [figwheel-sidecar "0.5.20"]]
-                   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}}
+             :dev     {:dependencies [[cider/piggieback "0.5.3"]
+                                      [nrepl "0.9.0"]
+                                      [figwheel-sidecar "0.5.20"]]
+                       :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}}
 
   :cljsbuild {:builds [{:id           "dev"
                         :source-paths ["src/main/cljs" "src/main/cljc"]
