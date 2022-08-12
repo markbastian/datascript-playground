@@ -13,7 +13,7 @@
                  [com.clojure-goes-fast/clj-memory-meter "0.2.1"]
                  ;For comparison
                  [com.datomic/datomic-free "0.9.5697"]
-                 [com.google.guava/guava "26.0-jre"]
+                 [com.google.guava/guava "31.1-jre"]
                  [org.clojure/java.jdbc "0.7.12"]
                  [com.h2database/h2 "2.1.214"]
                  ;Graph stuff
@@ -25,8 +25,9 @@
                  [datascript-transit "0.3.0"]
                  [io.replikativ/datahike "0.5.1507"]]
 
-  :plugins [[lein-figwheel "0.5.16"]
-            [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]]
+  :plugins [[lein-figwheel "0.5.20"]
+            [lein-cljsbuild "1.1.8" :exclusions [[org.clojure/clojure]]]
+            [marginalia "0.9.1"]]
 
   :source-paths ["src/main/clj" "src/main/cljc"]
   :test-paths ["src/test/clojure"]
@@ -60,4 +61,7 @@
                                        :optimizations :advanced
                                        :pretty-print  false}}]}
 
-  :figwheel {:css-dirs ["resources/public/css"]})
+  :figwheel {:css-dirs ["resources/public/css"]}
+
+  :aliases {"docs" ["marg"
+                    "src/main/clj/datascript_playground/fact_stores/facts.clj"]})
