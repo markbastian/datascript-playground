@@ -18,6 +18,7 @@
 ;; This model is already kind of screwed up:
 ;;
 ;; - Is _Krypto The Superdog_ a person?
+;; - What defines a person?
 ;; - Are Villains heroes? Is a nemesis the person or the super?
 ;; - Does Batman actually have any powers?
 ;; - What defines a hero or a villain?
@@ -346,11 +347,6 @@
      :nemesis
      (map :name))
 
-;; The entity API is basically a graph api across all refs
-(->> (ds/entity dc-db [:name "Batman"])
-     :nemesis
-     (map :name))
-
 ;; Let's combo this with retraction
 (let [db (ds/db-with dc-db [[:db/retract [:name "Batman"] :nemesis [:name "Joker"]]])]
   (->> (ds/entity db [:name "Batman"])
@@ -374,11 +370,14 @@
 ;; Get all the attributes
 (ds/pull dc-db '[*] [:name "Superman"])
 
+;; Get specific attributes
 (ds/pull dc-db '[:teams :powers] [:name "Superman"])
 
-;; Not shown here, but pull syntax can be deeply nested. I personally prefer q
-;; when doing these types of data queries. There's also some great examples of
-;; pull [here](https://tinyurl.com/366a3h9p).
+;; Get nested attributes
+(ds/pull dc-db '[:teams {:nemesis [:name :powers]}] [:name "Superman"])
+
+;; I personally prefer q to complicated pull queries. There's also some great
+;; examples of pull [here](https://tinyurl.com/366a3h9p).
 
 ;; The Query API
 (ds/q
@@ -433,6 +432,10 @@
       :child  [{:name "Ben Parker"}
                {:name "Richard Parker"}]
       :gender "M"}
+     ;;Uncomment for recursive example
+     #_{:name   "Richard's Granddad"
+      :child  [{:name "Richard's Dad"}]
+      :gender "M"}
      {:name   "Richard's Mom"
       :child  [{:name "Ben Parker"}
                {:name "Richard Parker"}]
@@ -462,6 +465,13 @@
 (ds/q uncle-query parker-family [:name "Peter Parker"])
 
 ;; Using recursive rules we can get all of Peter's ancestors
+(def rules
+  '[[(ancestor ?p ?c)
+     [?p :child ?c]]
+    [(ancestor ?gp ?gc)
+     [?gp :child ?c]
+     (ancestor ?c ?gc)]])
+
 (ds/q
   '[:find ?ancestor-name
     :in $ % ?person
@@ -469,11 +479,7 @@
     (ancestor ?a ?person)
     [?a :name ?ancestor-name]]
   parker-family
-  '[[(ancestor ?p ?c)
-     [?p :child ?c]]
-    [(ancestor ?gp ?gc)
-     [?gp :child ?c]
-     (ancestor ?c ?gc)]]
+  rules
   [:name "Peter Parker"])
 
 (def marvel-db
@@ -510,6 +516,25 @@
     [$dc ?ed :name ?dc-name]
     [$marvel ?em :name ?marvel-name]]
   dc-db marvel-db)
+
+;; Database functions - Note that this is implementation-dependent
+;; The following is relevant for datascript and datahike
+
+(defn increase-age [db hero-names]
+  (let [res (ds/q
+               '[:find ?e ?age
+                 :in $ [?name ...]
+                 :where
+                 [?e :name ?name]
+                 [?e :age ?age]]
+               db hero-names)]
+    (mapv (fn [[e a]] [:db/add e :age (inc a)]) res)))
+
+(-> (ds/empty-db)
+    (ds/db-with [{:name "Batman" :age 35}
+                 {:name "Superman" :age 40}
+                 {:name "Wonderwoman" :age 25}])
+    (ds/db-with [[:db.fn/call increase-age ["Batman" "Wonderwoman"]]]))
 
 ;; ## Practical Use
 ;; Define the schema
