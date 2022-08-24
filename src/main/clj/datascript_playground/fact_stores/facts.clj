@@ -306,24 +306,42 @@
    {:name   "Faora"
     :powers ["Flying" "Strength" "X-Ray Vision" "Laser Eyes"]}])
 
+(def dc-schema
+  {:name    {:db/unique :db.unique/identity}
+   :weapons {:db/cardinality :db.cardinality/many}
+   :powers  {:db/cardinality :db.cardinality/many}
+   :teams   {:db/cardinality :db.cardinality/many}
+   :nemesis {:db/cardinality :db.cardinality/many
+             :db/valueType   :db.type/ref}})
+
 (def dc-db
-  (-> (ds/empty-db
-        {:name    {:db/unique :db.unique/identity}
-         :weapons {:db/cardinality :db.cardinality/many}
-         :powers  {:db/cardinality :db.cardinality/many}
-         :teams   {:db/cardinality :db.cardinality/many}
-         :nemesis {:db/cardinality :db.cardinality/many
-                   :db/valueType   :db.type/ref}})
+  (-> (ds/empty-db dc-schema)
       (ds/db-with interesting-dc-entities)))
 
+;; Now that we've defined schema, we can also inspect it, including the
+;; reverse schema (types -> attributes)
+(:schema dc-db)
+(:rschema dc-db)
+
+;; We can also see the "covering indexes" of the datoms in the db.
+(ds/datoms dc-db :eavt)
+(ds/datoms dc-db :aevt)
+(ds/datoms dc-db :avet)
+
+;; Other ways of editing the db...
+;; # Addition
+(ds/db-with
+  dc-db
+  [[:db/add [:name "Batman"] :favorite-food "Bat Bites"]])
+
 ;; # Retraction
-;; Until now, we've implicitly shown assertion. You can also retract facts.
+;; You can retract facts.
 (ds/db-with
   dc-db
   [[:db/retract [:name "Batman"] :nemesis [:name "Joker"]]])
 
-;; And you can retract entire entities - Note that the entity and all references
-;; to it are gone.
+;; You can retract entire entities - Note that the entity and all references to
+;; it are gone.
 (ds/db-with dc-db [[:db/retractEntity [:name "Joker"]]])
 
 ;; # Queries
@@ -334,7 +352,6 @@
 ;; - Datalog queries (q)
 
 ;; ## The Entity API
-
 (-> (ds/entity dc-db 1) :name)
 
 ;; Nobody thinks in terms of entity ids (and you don't want to expose your db
@@ -433,9 +450,9 @@
                {:name "Richard Parker"}]
       :gender "M"}
      ;;Uncomment for recursive example
-     #_{:name   "Richard's Granddad"
-      :child  [{:name "Richard's Dad"}]
-      :gender "M"}
+     {:name   "Richard's Granddad"
+        :child  [{:name "Richard's Dad"}]
+        :gender "M"}
      {:name   "Richard's Mom"
       :child  [{:name "Ben Parker"}
                {:name "Richard Parker"}]
@@ -522,12 +539,12 @@
 
 (defn increase-age [db hero-names]
   (let [res (ds/q
-               '[:find ?e ?age
-                 :in $ [?name ...]
-                 :where
-                 [?e :name ?name]
-                 [?e :age ?age]]
-               db hero-names)]
+              '[:find ?e ?age
+                :in $ [?name ...]
+                :where
+                [?e :name ?name]
+                [?e :age ?age]]
+              db hero-names)]
     (mapv (fn [[e a]] [:db/add e :age (inc a)]) res)))
 
 (-> (ds/empty-db)

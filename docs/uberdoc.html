@@ -2889,6 +2889,7 @@ net.brehaut.ClojureTools = (function (SH) {
 
 <ul>
 <li>Is <em>Krypto The Superdog</em> a person?</li>
+<li>What defines a person?</li>
 <li>Are Villains heroes? Is a nemesis the person or the super?</li>
 <li>Does Batman actually have any powers?</li>
 <li>What defines a hero or a villain?</li>
@@ -3151,21 +3152,33 @@ grouped.</p>
     :powers [&quot;Flying&quot; &quot;Strength&quot; &quot;X-Ray Vision&quot; &quot;Laser Eyes&quot;]}
    {:name   &quot;Faora&quot;
     :powers [&quot;Flying&quot; &quot;Strength&quot; &quot;X-Ray Vision&quot; &quot;Laser Eyes&quot;]}])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def dc-schema
+  {:name    {:db/unique :db.unique/identity}
+   :weapons {:db/cardinality :db.cardinality/many}
+   :powers  {:db/cardinality :db.cardinality/many}
+   :teams   {:db/cardinality :db.cardinality/many}
+   :nemesis {:db/cardinality :db.cardinality/many
+             :db/valueType   :db.type/ref}})</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(def dc-db
-  (-&gt; (ds/empty-db
-        {:name    {:db/unique :db.unique/identity}
-         :weapons {:db/cardinality :db.cardinality/many}
-         :powers  {:db/cardinality :db.cardinality/many}
-         :teams   {:db/cardinality :db.cardinality/many}
-         :nemesis {:db/cardinality :db.cardinality/many
-                   :db/valueType   :db.type/ref}})
-      (ds/db-with interesting-dc-entities)))</pre></td></tr><tr><td class="docs"><h1>Retraction</h1>
+  (-&gt; (ds/empty-db dc-schema)
+      (ds/db-with interesting-dc-entities)))</pre></td></tr><tr><td class="docs"><p>Now that we've defined schema, we can also inspect it, including the
+reverse schema (types -> attributes)</p>
+</td><td class="codes"><pre class="brush: clojure">(:schema dc-db)
+(:rschema dc-db)</pre></td></tr><tr><td class="docs"><p>We can also see the "covering indexes" of the datoms in the db.</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/datoms dc-db :eavt)
+(ds/datoms dc-db :aevt)
+(ds/datoms dc-db :avet)</pre></td></tr><tr><td class="docs"><p>Other ways of editing the db...</p>
 
-<p>Until now, we've implicitly shown assertion. You can also retract facts.</p>
+<h1>Addition</h1>
 </td><td class="codes"><pre class="brush: clojure">(ds/db-with
   dc-db
-  [[:db/retract [:name &quot;Batman&quot;] :nemesis [:name &quot;Joker&quot;]]])</pre></td></tr><tr><td class="docs"><p>And you can retract entire entities - Note that the entity and all references
-to it are gone.</p>
+  [[:db/add [:name &quot;Batman&quot;] :favorite-food &quot;Bat Bites&quot;]])</pre></td></tr><tr><td class="docs"><h1>Retraction</h1>
+
+<p>You can retract facts.</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/db-with
+  dc-db
+  [[:db/retract [:name &quot;Batman&quot;] :nemesis [:name &quot;Joker&quot;]]])</pre></td></tr><tr><td class="docs"><p>You can retract entire entities - Note that the entity and all references to
+it are gone.</p>
 </td><td class="codes"><pre class="brush: clojure">(ds/db-with dc-db [[:db/retractEntity [:name &quot;Joker&quot;]]])</pre></td></tr><tr><td class="docs"><h1>Queries</h1>
 
 <p>There are <em>generally</em> 3 ways you can query these dbs:</p>
@@ -3176,14 +3189,10 @@ to it are gone.</p>
 <li>Datalog queries (q)</li>
 </ul>
 </td><td class="codes"></td></tr><tr><td class="docs"><h2>The Entity API</h2>
-</td><td class="codes"></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/entity dc-db 1) :name)</pre></td></tr><tr><td class="docs"><p>Nobody thinks in terms of entity ids (and you don't want to expose your db
 internals. Instead, use "Lookup Refs," a tuple of [attr val] for any
 db.unique attribute.</p>
 </td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/entity dc-db [:name &quot;Batman&quot;]) :name)</pre></td></tr><tr><td class="docs"><p>The entity API is basically a graph api across all refs</p>
-</td><td class="codes"><pre class="brush: clojure">(-&gt;&gt; (ds/entity dc-db [:name &quot;Batman&quot;])
-     :nemesis
-     (map :name))</pre></td></tr><tr><td class="docs"><p>The entity API is basically a graph api across all refs</p>
 </td><td class="codes"><pre class="brush: clojure">(-&gt;&gt; (ds/entity dc-db [:name &quot;Batman&quot;])
      :nemesis
      (map :name))</pre></td></tr><tr><td class="docs"><p>Let's combo this with retraction</p>
@@ -3201,10 +3210,10 @@ db.unique attribute.</p>
      distinct
      (map :name))</pre></td></tr><tr><td class="docs"><h2>The Pull API</h2>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>Get all the attributes</p>
-</td><td class="codes"><pre class="brush: clojure">(ds/pull dc-db '[*] [:name &quot;Superman&quot;])</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(ds/pull dc-db '[:teams :powers] [:name &quot;Superman&quot;])</pre></td></tr><tr><td class="docs"><p>Not shown here, but pull syntax can be deeply nested. I personally prefer q
-when doing these types of data queries. There's also some great examples of
-pull <a href="https://tinyurl.com/366a3h9p">here</a>.</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/pull dc-db '[*] [:name &quot;Superman&quot;])</pre></td></tr><tr><td class="docs"><p>Get specific attributes</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/pull dc-db '[:teams :powers] [:name &quot;Superman&quot;])</pre></td></tr><tr><td class="docs"><p>Get nested attributes</p>
+</td><td class="codes"><pre class="brush: clojure">(ds/pull dc-db '[:teams {:nemesis [:name :powers]}] [:name &quot;Superman&quot;])</pre></td></tr><tr><td class="docs"><p>I personally prefer q to complicated pull queries. There's also some great
+examples of pull <a href="https://tinyurl.com/366a3h9p">here</a>.</p>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>The Query API</p>
 </td><td class="codes"><pre class="brush: clojure">(ds/q
   '[:find ?e
@@ -3253,6 +3262,10 @@ advanced queries.</p>
       :child  [{:name &quot;Ben Parker&quot;}
                {:name &quot;Richard Parker&quot;}]
       :gender &quot;M&quot;}
+     ;;Uncomment for recursive example
+     {:name   &quot;Richard's Granddad&quot;
+        :child  [{:name &quot;Richard's Dad&quot;}]
+        :gender &quot;M&quot;}
      {:name   &quot;Richard's Mom&quot;
       :child  [{:name &quot;Ben Parker&quot;}
                {:name &quot;Richard Parker&quot;}]
@@ -3276,6 +3289,12 @@ you can store and reuse them.</p>
     ; Get the :name attribute as ?uncle-name
     [?uncle :name ?uncle-name]])</pre></td></tr><tr><td class="docs"><p>Who is Peter Parker's uncle?</p>
 </td><td class="codes"><pre class="brush: clojure">(ds/q uncle-query parker-family [:name &quot;Peter Parker&quot;])</pre></td></tr><tr><td class="docs"><p>Using recursive rules we can get all of Peter's ancestors</p>
+</td><td class="codes"><pre class="brush: clojure">(def rules
+  '[[(ancestor ?p ?c)
+     [?p :child ?c]]
+    [(ancestor ?gp ?gc)
+     [?gp :child ?c]
+     (ancestor ?c ?gc)]])</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(ds/q
   '[:find ?ancestor-name
     :in $ % ?person
@@ -3283,11 +3302,7 @@ you can store and reuse them.</p>
     (ancestor ?a ?person)
     [?a :name ?ancestor-name]]
   parker-family
-  '[[(ancestor ?p ?c)
-     [?p :child ?c]]
-    [(ancestor ?gp ?gc)
-     [?gp :child ?c]
-     (ancestor ?c ?gc)]]
+  rules
   [:name &quot;Peter Parker&quot;])</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(def marvel-db
   (-&gt; (ds/empty-db
@@ -3320,7 +3335,23 @@ you can store and reuse them.</p>
     [$marvel ?em :powers ?power]
     [$dc ?ed :name ?dc-name]
     [$marvel ?em :name ?marvel-name]]
-  dc-db marvel-db)</pre></td></tr><tr><td class="docs"><h2>Practical Use</h2>
+  dc-db marvel-db)</pre></td></tr><tr><td class="docs"><p>Database functions - Note that this is implementation-dependent
+The following is relevant for datascript and datahike</p>
+</td><td class="codes"></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn increase-age [db hero-names]
+  (let [res (ds/q
+              '[:find ?e ?age
+                :in $ [?name ...]
+                :where
+                [?e :name ?name]
+                [?e :age ?age]]
+              db hero-names)]
+    (mapv (fn [[e a]] [:db/add e :age (inc a)]) res)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(-&gt; (ds/empty-db)
+    (ds/db-with [{:name &quot;Batman&quot; :age 35}
+                 {:name &quot;Superman&quot; :age 40}
+                 {:name &quot;Wonderwoman&quot; :age 25}])
+    (ds/db-with [[:db.fn/call increase-age [&quot;Batman&quot; &quot;Wonderwoman&quot;]]]))</pre></td></tr><tr><td class="docs"><h2>Practical Use</h2>
 
 <p>Define the schema</p>
 </td><td class="codes"><pre class="brush: clojure">(def superhero-schema
